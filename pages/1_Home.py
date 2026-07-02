@@ -179,6 +179,9 @@ with c_act:
     if st.button("📈 Open Visualization Studio", use_container_width=True, type="secondary"):
         st.switch_page("pages/5_Visualizations.py")
         
+    if st.button("💡 Explore Edge Intelligence Graph", use_container_width=True, type="secondary"):
+        st.switch_page("pages/9_Edge_Intelligence.py")
+        
     if st.button("💾 Open Download & Export Center", use_container_width=True, type="secondary"):
         st.switch_page("pages/6_Reports.py")
 

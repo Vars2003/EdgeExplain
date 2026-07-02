@@ -30,6 +30,8 @@ if "recs" not in st.session_state:
     st.session_state.recs = None
 if "insights" not in st.session_state:
     st.session_state.insights = None
+if "memory" not in st.session_state:
+    st.session_state.memory = None
 
 # Configurable Settings State keys
 if "outlier_threshold" not in st.session_state:
@@ -66,6 +68,7 @@ try:
             st.Page("pages/3_Analytics.py", title="Analytics Explorer", icon="📊"),
             st.Page("pages/4_AI_Insights.py", title="AI Insights", icon="🧠"),
             st.Page("pages/5_Visualizations.py", title="Visualizations", icon="📈"),
+            st.Page("pages/9_Edge_Intelligence.py", title="Edge Intelligence", icon="💡"),
             st.Page("pages/3_Dataset_Overview.py", title="Legacy All-In-One", icon="🛡️")
         ],
         "Management": [

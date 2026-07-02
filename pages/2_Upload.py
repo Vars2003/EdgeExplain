@@ -9,6 +9,8 @@ from core.dependency import compute_dependency_matrix
 from core.intelligence import DataIntelligenceEngine
 from core.recommendation import RecommendationEngine
 from core.insights import InsightsEngine
+from core.algorithm_selector import AlgorithmSelector
+from intelligence import MemoryObject, event_system
 
 # Re-inject css for sub-page rendering consistency
 inject_custom_css()
@@ -116,9 +118,27 @@ if uploaded_file is not None:
             insights = InsightsEngine.generate_insights(df, metrics, semantic_types)
             st.session_state.insights = insights
             
+            # Step 8: Memory Compilation & Events
+            progress_text.markdown("🧠 *Compiling Unified JSON Memory Object...*")
+            progress_bar.progress(98)
+            
+            algo_recs = AlgorithmSelector.recommend_algorithms(
+                df, dataset_type_info, semantic_types, metrics
+            )
+            memory_obj = MemoryObject.compile_memory_object(
+                df, uploaded_file.name, metrics, semantic_types, domain_info, dataset_type_info, algo_recs
+            )
+            st.session_state.memory = memory_obj
+            
+            # Dispatch Lifecyle Events
+            event_system.dispatch("DatasetUploaded", uploaded_file.name)
+            event_system.dispatch("AnalysisCompleted", memory_obj)
+            event_system.dispatch("MemoryUpdated", memory_obj)
+            event_system.dispatch("SummaryGenerated", memory_obj.get("summaries", {}))
+            
             progress_bar.progress(100)
             progress_text.empty()
-            st.success("🎉 Ingestion and evaluation complete!")
+            st.success("🎉 Ingestion, profiling, and memory compilation complete!")
             
         except Exception as e:
             progress_bar.empty()
