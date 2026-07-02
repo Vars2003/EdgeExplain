@@ -43,6 +43,20 @@ if "target_column" not in st.session_state:
 if "theme" not in st.session_state:
     st.session_state.theme = settings.DEFAULT_THEME
 
+# AI Assistant Session state initializations
+if "ai_fallback_mode" not in st.session_state:
+    st.session_state.ai_fallback_mode = True
+if "ai_selected_model" not in st.session_state:
+    st.session_state.ai_selected_model = None
+if "ai_max_context" not in st.session_state:
+    st.session_state.ai_max_context = 2048
+if "ai_temperature" not in st.session_state:
+    st.session_state.ai_temperature = 0.7
+if "ai_persona" not in st.session_state:
+    st.session_state.ai_persona = "Data Analyst"
+if "ai_streaming" not in st.session_state:
+    st.session_state.ai_streaming = True
+
 # Sidebar branding header
 st.sidebar.markdown(
     """
@@ -69,6 +83,7 @@ try:
             st.Page("pages/4_AI_Insights.py", title="AI Insights", icon="🧠"),
             st.Page("pages/5_Visualizations.py", title="Visualizations", icon="📈"),
             st.Page("pages/9_Edge_Intelligence.py", title="Edge Intelligence", icon="💡"),
+            st.Page("pages/10_AI_Assistant.py", title="AI Chat Assistant", icon="💬"),
             st.Page("pages/3_Dataset_Overview.py", title="Legacy All-In-One", icon="🛡️")
         ],
         "Management": [

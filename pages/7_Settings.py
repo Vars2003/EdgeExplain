@@ -4,6 +4,7 @@ from utils.helpers import inject_custom_css
 from core.profiler import DatasetProfiler
 from core.recommendation import RecommendationEngine
 from core.insights import InsightsEngine
+from ai import model_manager
 
 # Re-inject CSS for visual consistency
 inject_custom_css()
@@ -108,30 +109,91 @@ with c_config:
             st.toast("✅ Outlier metrics updated!")
 
 with c_ai:
-    st.subheader("🤖 Future Local AI Configuration")
+    st.subheader("🤖 Local AI Configuration")
     
-    st.selectbox(
-        "Theme Style Selector:",
-        ["Dark Slate (Active)", "Light Silver (Placeholder)"],
-        disabled=True,
-        help="Theme changes are pre-configured to dark-slate mode for maximum legibility."
-    )
+    # 1. Fallback / LLM Mode selector
+    providers = ["Fallback (Rule-Based Engine)", "Ollama"]
+    provider_idx = 1 if not st.session_state.get("ai_fallback_mode", False) else 0
     
-    st.selectbox(
-        "Select Local Inference Engine:",
-        ["llama.cpp (GGML/GGUF) - Placeholder", "Ollama API - Placeholder"],
-        index=0,
-        disabled=True
+    sel_prov = st.selectbox(
+        "Active Inference Provider:",
+        providers,
+        index=provider_idx,
+        help="Fallback Mode executes deterministic offline rules, bypassing local Ollama runtimes."
     )
+    st.session_state.ai_fallback_mode = (sel_prov == "Fallback (Rule-Based Engine)")
     
-    st.text_input(
-        "Model Folder Path (.gguf file):",
-        value="C:/Users/varsh/.cache/lm-studio/models/Llama-3-8B-Instruct.gguf",
-        disabled=True
+    # 2. Model Selection
+    available_models = []
+    if not st.session_state.ai_fallback_mode:
+        try:
+            available_models = model_manager.detect_available_models()
+        except Exception as e:
+            available_models = []
+            
+    if not st.session_state.ai_fallback_mode and available_models:
+        default_model = st.session_state.get("ai_selected_model", None)
+        default_idx = 0
+        if default_model in available_models:
+            default_idx = available_models.index(default_model)
+            
+        new_model = st.selectbox(
+            "Select Local Active Model:",
+            available_models,
+            index=default_idx
+        )
+        st.session_state.ai_selected_model = new_model
+        
+        # Display RAM info
+        mem_info = model_manager.estimate_model_memory(new_model)
+        st.markdown(
+            f"""
+            <div style='padding: 8px; margin-top:5px; background:rgba(56, 189, 248, 0.08); border-radius:4px; font-size:0.8rem;'>
+                💾 Size: <strong>{mem_info['estimated_file_size_gb']} GB</strong> | 
+                ⚙️ Min RAM: <strong>{mem_info['minimum_system_ram_gb']} GB</strong>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+    elif not st.session_state.ai_fallback_mode:
+        st.warning("⚠️ No active Ollama models detected. System will force-use Grounded Rule Fallback mode.")
+        st.session_state.ai_fallback_mode = True
+        
+    # 3. Context budget
+    new_context = st.slider(
+        "Max Context size (Tokens):",
+        512, 8192, int(st.session_state.get("ai_max_context", 2048)), 512,
+        help="Token boundaries for prompt builder compression."
     )
+    st.session_state.ai_max_context = new_context
     
-    st.slider(
-        "Local LLM Context Window:",
-        512, 8192, 2048, 512,
-        disabled=True
+    # 4. Temperature
+    new_temp = st.slider(
+        "Generation Temperature:",
+        0.1, 1.0, float(st.session_state.get("ai_temperature", 0.7)), 0.05,
+        help="Controls creativity. Lower values are more deterministic."
     )
+    st.session_state.ai_temperature = new_temp
+    
+    # 5. Persona
+    personas = ["Data Analyst", "ML Engineer", "Research Assistant"]
+    p_idx = 0
+    cur_p = st.session_state.get("ai_persona", "Data Analyst")
+    if cur_p in personas:
+        p_idx = personas.index(cur_p)
+        
+    new_persona = st.selectbox(
+        "Active System Persona:",
+        personas,
+        index=p_idx,
+        help="Alters system prompt persona behaviors."
+    )
+    st.session_state.ai_persona = new_persona
+    
+    # 6. Streaming toggle
+    new_stream = st.toggle(
+        "Enable Token Streaming",
+        value=bool(st.session_state.get("ai_streaming", True)),
+        help="Progressively types words instead of complete generation."
+    )
+    st.session_state.ai_streaming = new_stream
