@@ -73,7 +73,31 @@ class MemoryObject:
             "plugins": {} # Future plugin outputs will append here
         }
         
-        # 7. Execute Plugins if registered
+        # 7. Register Plugins dynamically
+        try:
+            from plugins.shap_plugin import ShapExplainabilityPlugin
+            from plugins.lime_plugin import LimeExplainabilityPlugin
+            from plugins.automl_plugin import AutoMLRecommendationPlugin
+            from plugins.drift_plugin import DatasetDriftPlugin
+            from plugins.leakage_plugin import LeakageDetectionPlugin
+            from plugins.bias_plugin import BiasAnalysisPlugin
+            from plugins.comparison_plugin import DatasetComparisonPlugin
+            from plugins.evaluation_plugin import AIEvaluationPlugin
+            from plugins.report_plugin import ProfessionalReportPlugin
+            
+            plugin_manager.register("shap", ShapExplainabilityPlugin())
+            plugin_manager.register("lime", LimeExplainabilityPlugin())
+            plugin_manager.register("automl", AutoMLRecommendationPlugin())
+            plugin_manager.register("drift", DatasetDriftPlugin())
+            plugin_manager.register("leakage", LeakageDetectionPlugin())
+            plugin_manager.register("bias", BiasAnalysisPlugin())
+            plugin_manager.register("comparison", DatasetComparisonPlugin())
+            plugin_manager.register("evaluation", AIEvaluationPlugin())
+            plugin_manager.register("report", ProfessionalReportPlugin())
+        except Exception as e:
+            logger.error(f"Failed to dynamically register plugins: {e}")
+            
+        # 8. Execute Plugins
         plugin_outputs = plugin_manager.run_all(df, memory_payload)
         memory_payload["plugins"] = plugin_outputs
         

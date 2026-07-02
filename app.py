@@ -84,6 +84,10 @@ try:
             st.Page("pages/5_Visualizations.py", title="Visualizations", icon="📈"),
             st.Page("pages/9_Edge_Intelligence.py", title="Edge Intelligence", icon="💡"),
             st.Page("pages/10_AI_Assistant.py", title="AI Chat Assistant", icon="💬"),
+            st.Page("pages/11_Explainability.py", title="XAI Explainability", icon="🧬"),
+            st.Page("pages/12_Dataset_Comparison.py", title="Dataset Comparison", icon="⚖️"),
+            st.Page("pages/13_Model_Recommendations.py", title="AutoML Pipelines", icon="🤖"),
+            st.Page("pages/14_AI_Evaluation.py", title="AI Chat Evaluation", icon="🎯"),
             st.Page("pages/3_Dataset_Overview.py", title="Legacy All-In-One", icon="🛡️")
         ],
         "Management": [
