@@ -95,3 +95,8 @@ DOMAIN_VOCABULARIES = {
         "hashtag", "views", "user_id", "retweet", "subscriber"
     ]
 }
+
+# Configurable analytical threshold defaults
+DEFAULT_OUTLIER_THRESHOLD = 1.5
+DEFAULT_CORRELATION_THRESHOLD = 0.3
+DEFAULT_THEME = "Dark Slate"

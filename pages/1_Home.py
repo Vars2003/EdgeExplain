@@ -1,122 +1,202 @@
 import streamlit as st
-from utils.helpers import inject_custom_css
+from utils.helpers import inject_custom_css, format_bytes
 
-# Re-inject css for sub-page rendering consistency
+# Re-inject CSS for layout consistency
 inject_custom_css()
 
-# Header layout with gradient accent
+# Title banner
 st.markdown(
     """
     <div style='padding: 20px 0; border-bottom: 1px solid #334155; margin-bottom: 30px;'>
         <h1 style='font-family: Outfit, sans-serif; font-size: 2.5rem; margin: 0; background: linear-gradient(90deg, #38BDF8, #818CF8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>
-            Welcome to EdgeExplain
+            Executive BI Dashboard
         </h1>
         <p style='color: #94A3B8; font-size: 1.1rem; margin: 10px 0 0 0;'>
-            Your Offline AI Data Scientist Platform — Secure, Private, and Local.
+            Offline Data Science and Structural Intelligence Summary.
         </p>
     </div>
     """,
     unsafe_allow_html=True
 )
 
-# Main Grid (2 columns: Intro & Workflow)
-col1, col2 = st.columns([1.1, 0.9])
-
-with col1:
+# ----------------------------------------------------
+# EMPTY STATE: ONBOARDING PANEL
+# ----------------------------------------------------
+if st.session_state.df is None:
     st.markdown(
         """
         <div class="glass-card">
-            <h3>🛡️ Edge AI: Pure Local Autonomy</h3>
-            <p style='color: #E2E8F0; line-height: 1.6;'>
-                Traditional data tools rely on cloud APIs, exposing sensitive business files and proprietary schemas 
-                to external servers. <strong>EdgeExplain</strong> operates with complete data sovereignty:
+            <h2 style='color:#38BDF8; font-family: Outfit, sans-serif;'>👋 Welcome to EdgeExplain</h2>
+            <p style='color:#E2E8F0; font-size:1.05rem; line-height:1.6;'>
+                EdgeExplain is an offline-first, private workspace designed to analyze, score, and recommendation-tune 
+                your datasets without sending any bytes to external servers. Follow these quick steps to launch:
             </p>
-            <ul style='color: #E2E8F0; line-height: 1.6; margin-left: 20px;'>
-                <li><strong>Zero Network Calls</strong>: Every analysis, check, and statistical model runs locally.</li>
-                <li><strong>No API Keys Needed</strong>: Operates completely offline, safe from server outages and network delays.</li>
-                <li><strong>Maximum Security</strong>: Your data never leaves your device. Compliant with strict data privacy guidelines.</li>
-            </ul>
+            <div style='display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin: 25px 0;'>
+                <div style='background: rgba(15,23,42,0.4); border: 1px solid #334155; border-radius: 8px; padding: 20px;'>
+                    <span style='font-size: 2rem;'>📂</span>
+                    <h4 style='margin: 10px 0 5px 0;'>1. Supported Formats</h4>
+                    <p style='font-size: 0.85rem; color: #94A3B8;'>Ingest standard tables in CSV, Excel, Parquet, or JSON format. Up to 100MB.</p>
+                </div>
+                <div style='background: rgba(15,23,42,0.4); border: 1px solid #334155; border-radius: 8px; padding: 20px;'>
+                    <span style='font-size: 2rem;'>📤</span>
+                    <h4 style='margin: 10px 0 5px 0;'>2. Local Ingestion</h4>
+                    <p style='font-size: 0.85rem; color: #94A3B8;'>Upload your file. The parser detects datatypes and maps variable relationships.</p>
+                </div>
+                <div style='background: rgba(15,23,42,0.4); border: 1px solid #334155; border-radius: 8px; padding: 20px;'>
+                    <span style='font-size: 2rem;'>🧠</span>
+                    <h4 style='margin: 10px 0 5px 0;'>3. Core Evaluations</h4>
+                    <p style='font-size: 0.85rem; color: #94A3B8;'>Review quality scores, machine learning readiness profiles, and cleaning tips.</p>
+                </div>
+            </div>
         </div>
         """,
         unsafe_allow_html=True
     )
     
+    # Ingestion quick action redirect
+    st.markdown("### Get Started Now")
+    if st.button("📤 Load Dataset File", use_container_width=True, type="primary"):
+        st.switch_page("pages/2_Upload.py")
+        
+    st.markdown("---")
+    st.markdown("#### 🔄 Processing Pipeline Workflow")
     st.markdown(
         """
-        <div class="glass-card">
-            <h3>🚀 Core Capabilities</h3>
-            <div style='display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;'>
-                <div style='padding: 10px; border-left: 3px solid #38BDF8; background: rgba(56,189,248,0.05);'>
-                    <strong style='color:#38BDF8;'>Semantic Parser</strong><br>
-                    <span style='font-size:0.85rem; color:#94A3B8;'>Deduces variable categories beyond plain raw data types.</span>
-                </div>
-                <div style='padding: 10px; border-left: 3px solid #818CF8; background: rgba(129,140,248,0.05);'>
-                    <strong style='color:#818CF8;'>Custom Statistics</strong><br>
-                    <span style='font-size:0.85rem; color:#94A3B8;'>Calculates skewness, kurtosis, and quartiles from scratch.</span>
-                </div>
-                <div style='padding: 10px; border-left: 3px solid #34D399; background: rgba(52,211,153,0.05);'>
-                    <strong style='color:#34D399;'>Dependency Graph</strong><br>
-                    <span style='font-size:0.85rem; color:#94A3B8;'>Analyzes relationships via Cramer's V, ANOVA, and Mutual Info.</span>
-                </div>
-                <div style='padding: 10px; border-left: 3px solid #FBBF24; background: rgba(251,191,36,0.05);'>
-                    <strong style='color:#FBBF24;'>ML Matcher</strong><br>
-                    <span style='font-size:0.85rem; color:#94A3B8;'>Ranks offline algorithms matching your dataset volume and targets.</span>
-                </div>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-with col2:
-    st.markdown(
+        ```
+        Dataset Ingested ➔ Custom Profiler ➔ Custom Statistics ➔ Dependency Matrix ➔ Cognitive Reasoning ➔ Preprocessing Plan
+        ```
         """
-        <div class="glass-card" style='height: 100%;'>
-            <h3>📋 Platform Pipeline Workflow</h3>
-            <div style='position: relative; padding-left: 20px; border-left: 2px dashed #334155; margin: 15px 0 15px 10px;'>
-                <div style='margin-bottom: 20px;'>
-                    <span style='position: absolute; left: -9px; background: #38BDF8; width: 16px; height: 16px; border-radius: 50%; display: inline-block;'></span>
-                    <strong style='color: #F8FAFC;'>1. Data Ingestion</strong>
-                    <p style='font-size: 0.85rem; color: #94A3B8; margin: 3px 0 0 0;'>Loads CSV, Excel, Parquet, or JSON with auto-type validation.</p>
-                </div>
-                <div style='margin-bottom: 20px;'>
-                    <span style='position: absolute; left: -9px; background: #818CF8; width: 16px; height: 16px; border-radius: 50%; display: inline-block;'></span>
-                    <strong style='color: #F8FAFC;'>2. Structural Analytics</strong>
-                    <p style='font-size: 0.85rem; color: #94A3B8; margin: 3px 0 0 0;'>Profiles duplicates, calculates outliers, and generates quality scores.</p>
-                </div>
-                <div style='margin-bottom: 20px;'>
-                    <span style='position: absolute; left: -9px; background: #34D399; width: 16px; height: 16px; border-radius: 50%; display: inline-block;'></span>
-                    <strong style='color: #F8FAFC;'>3. Cognitive Layer</strong>
-                    <p style='font-size: 0.85rem; color: #94A3B8; margin: 3px 0 0 0;'>Deduces business domains and reasons about structural anomalies.</p>
-                </div>
-                <div>
-                    <span style='position: absolute; left: -9px; background: #FBBF24; width: 16px; height: 16px; border-radius: 50%; display: inline-block;'></span>
-                    <strong style='color: #F8FAFC;'>4. Decisions & Modeling</strong>
-                    <p style='font-size: 0.85rem; color: #94A3B8; margin: 3px 0 0 0;'>Suggests robust scaling options and matches algorithm suitability.</p>
-                </div>
-            </div>
-            <hr style='border-color: #334155; margin: 15px 0;'>
-            <h4>📂 Supported File Formats</h4>
-            <span class="tag tag-blue">CSV (.csv)</span>
-            <span class="tag tag-purple">Excel (.xlsx, .xls)</span>
-            <span class="tag tag-green">Parquet (.parquet)</span>
-            <span class="tag tag-orange">JSON (.json)</span>
-        </div>
-        """,
-        unsafe_allow_html=True
     )
+    st.stop()
 
-# Footer Privacy Guarantee Card
+# ----------------------------------------------------
+# ACTIVE STATE: BI EXECUTIVE SUMMARY DASHBOARD
+# ----------------------------------------------------
+df = st.session_state.df
+filename = st.session_state.filename
+metrics = st.session_state.metrics
+domain_info = st.session_state.domain
+task_info = st.session_state.dataset_type
+insights = st.session_state.insights
+
+rows, cols = df.shape
+quality_score = metrics["quality_score"]
+readiness_score = metrics["ml_readiness"]["score"]
+
+# Calculate Risk parameters
+risk_level = "Low"
+risk_color = "#10B981"
+if quality_score < 70 or len([i for i in insights if i["severity"] == "High"]) > 2:
+    risk_level = "High"
+    risk_color = "#EF4444"
+elif quality_score < 85 or len([i for i in insights if i["severity"] == "High"]) > 0:
+    risk_level = "Medium"
+    risk_color = "#F59E0B"
+
+# Render 10 Distinct KPI cards
 st.markdown(
-    """
-    <div style='margin-top: 20px; padding: 20px; border-radius: 12px; background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2);'>
-        <h4 style='color: #EF4444; margin: 0;'>🔒 Security & Privacy Notice</h4>
-        <p style='color: #F8FAFC; font-size: 0.9rem; margin: 8px 0 0 0; line-height: 1.5;'>
-            This system runs <strong>100% locally</strong>. Data is kept in-memory and cached within Streamlit session states. 
-            There are no cookies tracking your behavior, no external script CDNs enabled, and no telemetry pings.
-            Your local server logs are located in the <code>logs/</code> directory for complete audit transparency.
-        </p>
+    f"""
+    <div style='display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin-bottom: 25px;'>
+        <div class="stat-card" style='border-color: rgba(56, 189, 248, 0.4);'>
+            <div class="stat-label">Total Observations</div>
+            <div class="stat-val" style='color: #38BDF8;'>{rows:,}</div>
+        </div>
+        <div class="stat-card" style='border-color: rgba(56, 189, 248, 0.4);'>
+            <div class="stat-label">Dimensions</div>
+            <div class="stat-val" style='color: #38BDF8;'>{cols}</div>
+        </div>
+        <div class="stat-card" style='border-color: rgba(56, 189, 248, 0.4);'>
+            <div class="stat-label">Memory Size</div>
+            <div class="stat-val" style='color: #38BDF8; font-size:1.3rem; padding-top:6px;'>{metrics['basic_metrics']['memory_readable']}</div>
+        </div>
+        <div class="stat-card" style='border-color: rgba(245, 158, 11, 0.4);'>
+            <div class="stat-label">Missing Cells</div>
+            <div class="stat-val" style='color: #F59E0B;'>{metrics['missing_data']['total_missing']:,}</div>
+        </div>
+        <div class="stat-card" style='border-color: rgba(245, 158, 11, 0.4);'>
+            <div class="stat-label">Duplicate Rows</div>
+            <div class="stat-val" style='color: #F59E0B;'>{metrics['basic_metrics']['duplicate_rows']:,}</div>
+        </div>
+        <div class="stat-card" style='border-color: rgba(16, 185, 129, 0.4);'>
+            <div class="stat-label">Quality Score</div>
+            <div class="stat-val" style='color: #10B981;'>{quality_score:.1f}%</div>
+        </div>
+        <div class="stat-card" style='border-color: rgba(129, 140, 248, 0.4);'>
+            <div class="stat-label">ML Readiness</div>
+            <div class="stat-val" style='color: #818CF8;'>{readiness_score:.1f}%</div>
+        </div>
+        <div class="stat-card" style='border-color: rgba(236, 72, 153, 0.4);'>
+            <div class="stat-label">Dataset Focus</div>
+            <div class="stat-val" style='color: #EC4899; font-size: 1.15rem; padding-top:8px;'>{task_info['type']}</div>
+        </div>
+        <div class="stat-card" style='border-color: rgba(139, 92, 246, 0.4);'>
+            <div class="stat-label">Source Domain</div>
+            <div class="stat-val" style='color: #8B5CF6; font-size: 1.15rem; padding-top:8px;'>{domain_info['domain'].replace(" Dataset", "")}</div>
+        </div>
+        <div class="stat-card" style='border-color: {risk_color}66;'>
+            <div class="stat-label">Overall Risk</div>
+            <div class="stat-val" style='color: {risk_color};'>{risk_level}</div>
+        </div>
     </div>
     """,
     unsafe_allow_html=True
 )
+
+# Visual Gauges
+st.markdown("### 📊 Dataset Health Gauges")
+g_col1, g_col2, g_col3 = st.columns(3)
+
+with g_col1:
+    st.markdown(f"**Data Quality Completeness** ({quality_score:.1f}%)")
+    st.progress(quality_score / 100.0)
+with g_col2:
+    st.markdown(f"**ML Modeling Readiness** ({readiness_score:.1f}%)")
+    st.progress(readiness_score / 100.0)
+with g_col3:
+    # Scale risk: Low = 100% health, Med = 50% health, High = 10% health
+    risk_val = 0.95 if risk_level == "Low" else 0.50 if risk_level == "Medium" else 0.20
+    st.markdown(f"**Security & Risk Health** (Level: {risk_level})")
+    st.progress(risk_val)
+
+st.markdown("---")
+
+# Quick Actions Panel & Insights Summary Grid
+c_act, c_ins = st.columns([0.8, 1.2])
+
+with c_act:
+    st.markdown("### ⚡ Quick Actions")
+    
+    # Render quick action buttons that trigger switch_page
+    if st.button("📤 Upload New Dataset", use_container_width=True):
+        st.switch_page("pages/2_Upload.py")
+        
+    if st.button("📊 Explore Core Analytics", use_container_width=True, type="secondary"):
+        st.switch_page("pages/3_Analytics.py")
+        
+    if st.button("🧠 Review Cognitive AI Insights", use_container_width=True, type="secondary"):
+        st.switch_page("pages/4_AI_Insights.py")
+        
+    if st.button("📈 Open Visualization Studio", use_container_width=True, type="secondary"):
+        st.switch_page("pages/5_Visualizations.py")
+        
+    if st.button("💾 Open Download & Export Center", use_container_width=True, type="secondary"):
+        st.switch_page("pages/6_Reports.py")
+
+with c_ins:
+    st.markdown("### 💡 High-Severity Quality Warnings")
+    # Pull top 3 high or medium severity insights
+    critical_findings = [i for i in insights if i["severity"] in ["High", "Medium"]]
+    if not critical_findings:
+        st.success("🎉 No high or medium severity risks found in the dataset structure.")
+    else:
+        for idx, cf in enumerate(critical_findings[:3]):
+            s_color = "#F87171" if cf["severity"] == "High" else "#FBBF24"
+            st.markdown(
+                f"""
+                <div style='padding: 12px; margin-bottom: 10px; border-left: 4px solid {s_color}; background: rgba(30, 41, 59, 0.4); border-radius: 0 6px 6px 0;'>
+                    <strong style='color: #F8FAFC;'>{cf['title']}</strong>
+                    <p style='margin: 3px 0 0 0; font-size: 0.85rem; color: #94A3B8;'>{cf['description']}</p>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )

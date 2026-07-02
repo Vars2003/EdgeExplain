@@ -31,6 +31,16 @@ if "recs" not in st.session_state:
 if "insights" not in st.session_state:
     st.session_state.insights = None
 
+# Configurable Settings State keys
+if "outlier_threshold" not in st.session_state:
+    st.session_state.outlier_threshold = settings.DEFAULT_OUTLIER_THRESHOLD
+if "correlation_threshold" not in st.session_state:
+    st.session_state.correlation_threshold = settings.DEFAULT_CORRELATION_THRESHOLD
+if "target_column" not in st.session_state:
+    st.session_state.target_column = None
+if "theme" not in st.session_state:
+    st.session_state.theme = settings.DEFAULT_THEME
+
 # Sidebar branding header
 st.sidebar.markdown(
     """
@@ -45,13 +55,26 @@ st.sidebar.markdown(
     unsafe_allow_html=True
 )
 
-# Modern Streamlit Page Navigation
+# Modern Streamlit Page Navigation - Grouped BI Structure
 try:
-    pg = st.navigation([
-        st.Page("pages/1_Home.py", title="Home Page", icon="🏠"),
-        st.Page("pages/2_Upload.py", title="Data Ingestion", icon="📤"),
-        st.Page("pages/3_Dataset_Overview.py", title="Dataset Intelligence", icon="📊")
-    ])
+    pages = {
+        "Dashboard": [
+            st.Page("pages/1_Home.py", title="Dashboard Summary", icon="🏠"),
+            st.Page("pages/2_Upload.py", title="Data Ingestion", icon="📤")
+        ],
+        "Core Intelligence": [
+            st.Page("pages/3_Analytics.py", title="Analytics Explorer", icon="📊"),
+            st.Page("pages/4_AI_Insights.py", title="AI Insights", icon="🧠"),
+            st.Page("pages/5_Visualizations.py", title="Visualizations", icon="📈"),
+            st.Page("pages/3_Dataset_Overview.py", title="Legacy All-In-One", icon="🛡️")
+        ],
+        "Management": [
+            st.Page("pages/6_Reports.py", title="Export Center", icon="💾"),
+            st.Page("pages/7_Settings.py", title="Analysis Settings", icon="⚙️"),
+            st.Page("pages/8_About.py", title="About Platform", icon="ℹ️")
+        ]
+    }
+    pg = st.navigation(pages)
     pg.run()
 except Exception as e:
     st.error(f"Navigation router initialization failed: {e}")

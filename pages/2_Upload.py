@@ -36,7 +36,6 @@ uploaded_file = st.file_uploader(
 )
 
 if uploaded_file is not None:
-    # 1. Save file locally in the /data folder for audit trail
     data_folder = os.path.join(os.path.dirname(__file__), "..", "data")
     os.makedirs(data_folder, exist_ok=True)
     
@@ -44,90 +43,96 @@ if uploaded_file is not None:
     
     # Check if we need to load or if it's already loaded
     if st.session_state.filename != uploaded_file.name:
-        with st.status("🧠 Analyzing dataset locally...", expanded=True) as status:
-            try:
-                # Write uploaded bytes to local data directory
-                status.write("Saving file to local buffer...")
-                with open(local_file_path, "wb") as f:
-                    f.write(uploaded_file.getbuffer())
-                
-                # Load dataset
-                status.write("Parsing data structure...")
-                df = DataLoader.load_dataset(local_file_path)
-                
-                # Check empty
-                if df.empty:
-                    raise ValueError("The uploaded dataset contains zero rows or columns.")
-                
-                # Cache DataFrame
-                st.session_state.df = df
-                st.session_state.filename = uploaded_file.name
-                
-                # Run Data Intelligence
-                status.write("Running feature intelligence parser...")
-                semantic_types = DataIntelligenceEngine.detect_feature_types(df)
-                st.session_state.semantic_types = semantic_types
-                
-                # Infer Domain & Dataset Task Type
-                status.write("Estimating source domain and machine learning task category...")
-                domain_info = DataIntelligenceEngine.infer_source_domain(df)
-                st.session_state.domain = domain_info
-                
-                dataset_type_info = DataIntelligenceEngine.detect_dataset_type(df, semantic_types)
-                st.session_state.dataset_type = dataset_type_info
-                
-                # Run Statistics Engine
-                status.write("Calculating custom statistics descriptors (Mean, Median, Skewness, Kurtosis)...")
-                stats_summary = summarize_dataframe(df)
-                
-                # Run Dependency Engine
-                status.write("Analyzing variable dependencies (Pearson, ANOVA, Cramer's V)...")
-                dep_summary = compute_dependency_matrix(df, {col: info["type"] for col, info in semantic_types.items()})
-                
-                # Custom profiling summary
-                status.write("Diagnosing data quality and outlier bounds...")
-                basic_metrics = DatasetProfiler.get_basic_metrics(df)
-                missing_data = DatasetProfiler.analyze_missing_values(df)
-                outliers = DatasetProfiler.detect_outliers(df)
-                
-                quality_score = DatasetProfiler.calculate_data_quality_score(df, basic_metrics, missing_data, outliers)
-                ml_readiness = DatasetProfiler.calculate_ml_readiness_score(df, missing_data, basic_metrics)
-                
-                # Package metrics
-                metrics = {
-                    "basic_metrics": basic_metrics,
-                    "missing_data": missing_data,
-                    "outliers": outliers,
-                    "quality_score": quality_score,
-                    "ml_readiness": ml_readiness,
-                    "statistics": stats_summary,
-                    "dependency": dep_summary
-                }
-                st.session_state.metrics = metrics
-                
-                # Generate Recommendations
-                status.write("Compiling rules-based preprocessing recommendations...")
-                recs = RecommendationEngine.generate_recommendations(df, metrics, semantic_types)
-                st.session_state.recs = recs
-                
-                # Generate Natural-Language Insights
-                status.write("Synthesizing quality insights and variable patterns...")
-                insights = InsightsEngine.generate_insights(df, metrics, semantic_types)
-                st.session_state.insights = insights
-                
-                status.update(label="Ingestion and evaluation complete!", state="complete", expanded=False)
-                
-            except Exception as e:
-                status.update(label=f"Ingestion failed: {e}", state="error", expanded=True)
-                st.session_state.df = None
-                st.session_state.filename = None
-                if os.path.exists(local_file_path):
-                    try:
-                        os.remove(local_file_path)
-                    except:
-                        pass
-                st.stop()
-                
+        # Visual Load indicators
+        progress_bar = st.progress(0)
+        progress_text = st.empty()
+        
+        try:
+            # Step 1: Save
+            progress_text.markdown("📁 *Saving file to local buffer...*")
+            progress_bar.progress(10)
+            with open(local_file_path, "wb") as f:
+                f.write(uploaded_file.getbuffer())
+            
+            # Step 2: Load
+            progress_text.markdown("⚙️ *Parsing file structure...*")
+            progress_bar.progress(25)
+            df = DataLoader.load_dataset(local_file_path)
+            
+            if df.empty:
+                raise ValueError("The uploaded dataset contains zero rows or columns.")
+            
+            st.session_state.df = df
+            st.session_state.filename = uploaded_file.name
+            
+            # Step 3: Semantic Types
+            progress_text.markdown("🧠 *Running feature intelligence parser...*")
+            progress_bar.progress(45)
+            semantic_types = DataIntelligenceEngine.detect_feature_types(df)
+            st.session_state.semantic_types = semantic_types
+            
+            # Step 4: Domain & Task
+            progress_text.markdown("🔍 *Estimating source domain and machine learning task category...*")
+            progress_bar.progress(60)
+            domain_info = DataIntelligenceEngine.infer_source_domain(df)
+            st.session_state.domain = domain_info
+            
+            dataset_type_info = DataIntelligenceEngine.detect_dataset_type(df, semantic_types)
+            st.session_state.dataset_type = dataset_type_info
+            
+            # Step 5: Statistics & Dependencies
+            progress_text.markdown("🧮 *Calculating custom statistics descriptors (Mean, Median, Skewness, Kurtosis)...*")
+            progress_bar.progress(75)
+            stats_summary = summarize_dataframe(df)
+            dep_summary = compute_dependency_matrix(df, {col: info["type"] for col, info in semantic_types.items()})
+            
+            # Step 6: Profiling
+            progress_text.markdown("🔬 *Diagnosing data quality and outlier bounds...*")
+            progress_bar.progress(90)
+            basic_metrics = DatasetProfiler.get_basic_metrics(df)
+            missing_data = DatasetProfiler.analyze_missing_values(df)
+            outliers = DatasetProfiler.detect_outliers(df)
+            
+            quality_score = DatasetProfiler.calculate_data_quality_score(df, basic_metrics, missing_data, outliers)
+            ml_readiness = DatasetProfiler.calculate_ml_readiness_score(df, missing_data, basic_metrics)
+            
+            metrics = {
+                "basic_metrics": basic_metrics,
+                "missing_data": missing_data,
+                "outliers": outliers,
+                "quality_score": quality_score,
+                "ml_readiness": ml_readiness,
+                "statistics": stats_summary,
+                "dependency": dep_summary
+            }
+            st.session_state.metrics = metrics
+            
+            # Step 7: Recommendations & Insights
+            progress_text.markdown("🛠️ *Compiling recommendations and quality insights...*")
+            progress_bar.progress(95)
+            recs = RecommendationEngine.generate_recommendations(df, metrics, semantic_types)
+            st.session_state.recs = recs
+            
+            insights = InsightsEngine.generate_insights(df, metrics, semantic_types)
+            st.session_state.insights = insights
+            
+            progress_bar.progress(100)
+            progress_text.empty()
+            st.success("🎉 Ingestion and evaluation complete!")
+            
+        except Exception as e:
+            progress_bar.empty()
+            progress_text.empty()
+            st.error(f"Ingestion failed: {e}")
+            st.session_state.df = None
+            st.session_state.filename = None
+            if os.path.exists(local_file_path):
+                try:
+                    os.remove(local_file_path)
+                except:
+                    pass
+            st.stop()
+            
     # Display success dashboard card
     if st.session_state.df is not None:
         df = st.session_state.df
@@ -158,7 +163,7 @@ if uploaded_file is not None:
                     </div>
                 </div>
                 <div style='margin-top: 20px; font-size: 0.95rem; color: #E2E8F0;'>
-                    👉 Go to the <strong>Dataset Intelligence</strong> tab in the sidebar to review detailed profile summaries, statistics, variable networks, and preprocessing recommendations.
+                    👉 Go to the <strong>Dashboard Summary</strong> page in the sidebar to review overall statistics and health gauges.
                 </div>
             </div>
             """,
