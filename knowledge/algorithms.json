@@ -1,0 +1,55 @@
+{
+  "classification": {
+    "random_forest_classifier": {
+      "name": "Random Forest Classifier",
+      "description": "An ensemble of decision trees that averages their predictions to reduce overfitting.",
+      "pros": ["Handles mixed numerical and categorical features", "Robust to outliers", "Implicitly handles missing values", "Unlikely to overfit"],
+      "cons": ["Slow to predict on very large tree sets", "Can be memory-intensive", "Not easily interpretable"],
+      "suitability": "Highly suitable for general tabular datasets with complex non-linear relationships."
+    },
+    "logistic_regression": {
+      "name": "Logistic Regression",
+      "description": "A linear model that estimates probabilities of classes using a logistic function.",
+      "pros": ["Highly interpretable", "Very fast training and inference", "Requires minimal computational resources"],
+      "cons": ["Assumes linear relationship between log-odds and features", "Prone to underfitting on complex datasets", "Sensitive to outliers and multicollinearity"],
+      "suitability": "Best for simple datasets where interpretability is a priority and relationships are mostly linear."
+    },
+    "xgboost_classifier": {
+      "name": "XGBoost Classifier",
+      "description": "An optimized gradient boosted decision tree library designed to be highly efficient and flexible.",
+      "pros": ["State-of-the-art performance on tabular data", "Handles missing values natively", "Supports regularization to prevent overfitting"],
+      "cons": ["Many hyperparameters to tune", "Prone to overfitting on small datasets", "Slower to train than linear models"],
+      "suitability": "Recommended for larger datasets where predictive performance is the primary goal."
+    },
+    "decision_tree_classifier": {
+      "name": "Decision Tree Classifier",
+      "description": "A tree-structured model that splits data based on feature conditions.",
+      "pros": ["Highly visual and interpretable", "Requires minimal data preprocessing", "Handles non-linear relationships"],
+      "cons": ["High tendency to overfit", "Unstable (small changes in data change the tree structure)"],
+      "suitability": "Good for simple classification tasks and as a baseline model."
+    }
+  },
+  "regression": {
+    "random_forest_regressor": {
+      "name": "Random Forest Regressor",
+      "description": "Ensemble of regression decision trees.",
+      "pros": ["Robust to outliers", "Handles mixed data types", "No scaling required"],
+      "cons": ["Cannot extrapolate beyond the range of training data", "Large model size"],
+      "suitability": "Excellent for non-linear regression problems on tabular datasets."
+    },
+    "linear_regression": {
+      "name": "Linear Regression (OLS)",
+      "description": "Models linear relationship between inputs and a continuous target.",
+      "pros": ["Fastest regression baseline", "Highly interpretable coefficients"],
+      "cons": ["Assumes strictly linear relationship", "Sensitive to multicollinearity and outliers"],
+      "suitability": "Ideal as a baseline model and for simple linear datasets."
+    },
+    "xgboost_regressor": {
+      "name": "XGBoost Regressor",
+      "description": "Gradient boosted trees configured for continuous target regression.",
+      "pros": ["Extremely high accuracy on tabular data", "Handles missing values natively"],
+      "cons": ["Black-box model", "Requires careful parameter tuning"],
+      "suitability": "Best for complex regression tasks on tabular data."
+    }
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "summary_metrics": {
+    "mean": {
+      "name": "Mean",
+      "description": "The arithmetic average of a dataset.",
+      "interpretation": "Represents the central tendency. Highly sensitive to outliers."
+    },
+    "median": {
+      "name": "Median",
+      "description": "The middle value in a sorted dataset.",
+      "interpretation": "Robust measure of central tendency. Useful for skewed distributions."
+    },
+    "variance": {
+      "name": "Variance",
+      "description": "The average of the squared differences from the mean.",
+      "interpretation": "Measures data dispersion. Large values indicate wide spread."
+    },
+    "std_dev": {
+      "name": "Standard Deviation",
+      "description": "The square root of variance, representing average distance from the mean.",
+      "interpretation": "Standardized unit of dispersion, in the same unit as the original data."
+    },
+    "skewness": {
+      "name": "Skewness",
+      "description": "Measures the asymmetry of the probability distribution.",
+      "interpretation": "0 indicates symmetry. Positive skew (> 0.5) means long right tail. Negative skew (< -0.5) means long left tail."
+    },
+    "kurtosis": {
+      "name": "Kurtosis",
+      "description": "Measures the tailedness of the probability distribution.",
+      "interpretation": "3 is mesokurtic (normal). > 3 is leptokurtic (fat tails/heavy outliers). < 3 is platykurtic (thin tails/few outliers)."
+    }
+  },
+  "dependencies": {
+    "pearson": {
+      "name": "Pearson Correlation Coefficient",
+      "description": "Measures the linear correlation between two numeric variables.",
+      "interpretation": "Ranges from -1 to 1. 0 indicates no linear relationship. 1/-1 indicate perfect positive/negative linear relationships."
+    },
+    "spearman": {
+      "name": "Spearman Rank Correlation",
+      "description": "Measures the monotonic correlation between two numeric or ordinal variables.",
+      "interpretation": "Outlier robust. Measures if variables increase together, regardless of whether the relation is linear."
+    },
+    "cramers_v": {
+      "name": "Cramer's V",
+      "description": "Measures the strength of association between two nominal/categorical variables.",
+      "interpretation": "Ranges from 0 to 1. Close to 0 indicates weak association. Close to 1 indicates very strong association."
+    },
+    "anova": {
+      "name": "One-Way ANOVA (F-Test)",
+      "description": "Tests whether the means of a numeric variable differ significantly across categories of a categorical variable.",
+      "interpretation": "High F-statistic and low p-value (< 0.05) reject the null hypothesis, indicating significant group differences."
+    }
+  }
+}

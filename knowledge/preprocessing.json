@@ -1,0 +1,68 @@
+{
+  "imputation": {
+    "mean": {
+      "name": "Mean Imputation",
+      "description": "Fills missing values with the average value of the column.",
+      "formula": "\\mu = \\frac{1}{N} \\sum_{i=1}^{N} x_i",
+      "conditions": "Suitable only for continuous numeric data that is normally distributed and contains no significant outliers."
+    },
+    "median": {
+      "name": "Median Imputation",
+      "description": "Fills missing values with the middle value of the sorted column.",
+      "formula": "Median = x_{(N+1)/2} \\text{ (odd N)}",
+      "conditions": "Recommended for skewed numeric distributions and columns with outliers."
+    },
+    "mode": {
+      "name": "Mode Imputation",
+      "description": "Fills missing values with the most frequent value in the column.",
+      "formula": "\\text{Mode} = \\arg\\max_{v} \\text{count}(v)",
+      "conditions": "Best suited for categorical/nominal columns or discrete numeric columns with small ranges."
+    },
+    "knn": {
+      "name": "K-Nearest Neighbors Imputation",
+      "description": "Uses similarity metrics to impute missing values based on neighboring observations.",
+      "formula": "d(p, q) = \\sqrt{\\sum_{i=1}^{n} (p_i - q_i)^2}",
+      "conditions": "More accurate but computationally expensive. Suitable for low-to-medium dataset sizes."
+    }
+  },
+  "scaling": {
+    "standardization": {
+      "name": "Standardization (Z-score Normalization)",
+      "description": "Scales data to have a mean of 0 and a standard deviation of 1.",
+      "formula": "z = \\frac{x - \\mu}{\\sigma}",
+      "conditions": "Required for algorithms that assume normally distributed data (linear models, SVMs, neural networks)."
+    },
+    "minmax": {
+      "name": "Min-Max Scaling",
+      "description": "Rescales data to a fixed range, usually 0 to 1.",
+      "formula": "x' = \\frac{x - x_{min}}{x_{max} - x_{min}}",
+      "conditions": "Useful for algorithms that do not assume distribution shapes (KNNs, neural networks) and where exact bounds are known."
+    },
+    "robust": {
+      "name": "Robust Scaling",
+      "description": "Scales data using the median and IQR, making it robust to outliers.",
+      "formula": "x' = \\frac{x - \\text{median}}{\\text{IQR}}",
+      "conditions": "Highly recommended when numerical columns contain significant outliers."
+    }
+  },
+  "encoding": {
+    "onehot": {
+      "name": "One-Hot Encoding",
+      "description": "Creates binary columns for each unique category label.",
+      "formula": "y_{ik} = 1 \\text{ if } x_i = c_k \\text{ else } 0",
+      "conditions": "Best for nominal categorical features with low cardinality (<30 unique values)."
+    },
+    "ordinal": {
+      "name": "Ordinal Encoding",
+      "description": "Maps categories to integers based on an ordered scale.",
+      "formula": "f(c_k) = k \\text{ where } c_1 < c_2 < ... < c_m",
+      "conditions": "Required for categorical features that have an inherent order (e.g., educational grade, rating)."
+    },
+    "target": {
+      "name": "Target Encoding",
+      "description": "Replaces categorical values with the mean target value for that category.",
+      "formula": "S_k = P(y=1|x=c_k)",
+      "conditions": "Recommended for high-cardinality nominal columns to avoid feature explosion."
+    }
+  }
+}

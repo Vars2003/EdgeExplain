@@ -1,0 +1,52 @@
+{
+  "continuous_numerical": {
+    "name": "Continuous Numerical",
+    "description": "Numeric data that can take any value within a range (e.g. height, price, speed).",
+    "model_handling": "Requires scaling (MinMax or Standard) for distance-based models. Highly compatible with regression algorithms."
+  },
+  "discrete_numerical": {
+    "name": "Discrete Numerical",
+    "description": "Numeric data that represents countable items (e.g. number of children, item counts).",
+    "model_handling": "Can be treated as continuous or encoded if the range of unique values is small."
+  },
+  "nominal": {
+    "name": "Nominal Categorical",
+    "description": "Categorical data without any natural order (e.g. color, city, department).",
+    "model_handling": "Must be encoded (One-Hot for low cardinality, Target Encoding for high cardinality) before feeding to most ML models."
+  },
+  "ordinal": {
+    "name": "Ordinal Categorical",
+    "description": "Categorical data with a defined order or ranking (e.g. low/med/high, customer ratings).",
+    "model_handling": "Should be ordinally encoded to preserve the sequential distance information between categories."
+  },
+  "binary": {
+    "name": "Binary",
+    "description": "Variables containing exactly two distinct states (e.g. pass/fail, yes/no).",
+    "model_handling": "Represented as 0 and 1. Highly suitable for classification targets."
+  },
+  "boolean": {
+    "name": "Boolean",
+    "description": "Logical true or false columns.",
+    "model_handling": "Converted directly to binary numeric format (1/0)."
+  },
+  "identifier": {
+    "name": "Identifier",
+    "description": "Unique key or record identifier (e.g. Student_ID, UUID).",
+    "model_handling": "Should be removed from training data because it contains no generalizable predictive power and causes overfitting."
+  },
+  "datetime": {
+    "name": "DateTime",
+    "description": "Timestamps, dates, or clock times.",
+    "model_handling": "Requires feature engineering (extracting hour, day of week, month, elapsed time) before being used by ML models."
+  },
+  "text": {
+    "name": "Text",
+    "description": "Rich, free-form textual sentences or paragraphs.",
+    "model_handling": "Requires Natural Language Processing techniques (TF-IDF, word embeddings, tokenization) for tabular modeling."
+  },
+  "geographic_coordinate": {
+    "name": "Geographic Coordinate",
+    "description": "Spatial points consisting of latitude/longitude.",
+    "model_handling": "Can be used directly to calculate distance metrics or mapped into clusters (K-Means) for geographic grouping."
+  }
+}
