@@ -274,8 +274,7 @@ st.markdown("### 📊 Federated Evaluation & Convergence")
 cached_metrics = st.session_state.get("federated_metrics", None)
 
 if cached_metrics is not None:
-    # 9-tab dashboard setup
-    t_overview, t_clients, t_training, t_comm, t_evol, t_timeline, t_replay, t_exp, t_leader = st.tabs([
+    t_overview, t_clients, t_training, t_comm, t_evol, t_timeline, t_replay, t_exp, t_leader, t_analytics, t_contrib, t_fairness, t_hetero, t_explain, t_recommend = st.tabs([
         "👁️ Overview",
         "👥 Clients",
         "📈 Training",
@@ -284,7 +283,13 @@ if cached_metrics is not None:
         "⏱️ Timeline",
         "📼 Replay",
         "🧪 Experiments",
-        "🏆 Leaderboard"
+        "🏆 Leaderboard",
+        "📊 Analytics",
+        "🍕 Contribution",
+        "⚖️ Fairness",
+        "🧬 Heterogeneity",
+        "💬 Explainability",
+        "💡 Recommendations"
     ])
     
     hist = cached_metrics.get("convergence_history", [])
@@ -650,6 +655,138 @@ if cached_metrics is not None:
                     "Training Duration (ms)": f"{item['Train Time']:.2f}ms"
                 })
             st.dataframe(pd.DataFrame(lead_df), use_container_width=True)
+
+    # 10. ANALYTICS TAB
+    with t_analytics:
+        from federated.analytics import FederatedAnalyticsEngine
+        analytics_res = FederatedAnalyticsEngine.analyze_metrics(cached_metrics)
+        render_standard_schema_section(
+            title="Scientific Training Analytics Summary",
+            score=analytics_res["score"],
+            rating=analytics_res["rating"],
+            confidence=analytics_res["confidence"],
+            evidence=analytics_res["evidence"],
+            explanation=analytics_res["explanation"],
+            score_label="Validation Score"
+        )
+        
+    # 11. CONTRIBUTION TAB
+    with t_contrib:
+        st.subheader("🍕 Client Contribution Analysis")
+        from federated.contribution import FederatedContributionAnalyzer
+        contributions = FederatedContributionAnalyzer.analyze_contributions(cached_metrics)
+        
+        if contributions:
+            # Render overall score card (sum check)
+            total_sum = sum(c["contribution"] for c in contributions)
+            c1, c2 = st.columns(2)
+            with c1:
+                st.markdown(
+                    f"""
+                    <div class="stat-card" style='border-left: 4px solid #38BDF8;'>
+                        <div class="stat-label">Total Normalized Weight</div>
+                        <div class="stat-val">{total_sum:.1f}%</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+            with c2:
+                # Plotly Pie Chart
+                fig_pie = px.pie(
+                    pd.DataFrame(contributions),
+                    names="client", values="contribution",
+                    title="Normalized client contributions distribution"
+                )
+                fig_pie.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", template="plotly_dark")
+                st.plotly_chart(fig_pie, use_container_width=True)
+                
+            # Render contributions details
+            for c in contributions:
+                st.markdown(
+                    f"""
+                    <div class="glass-card" style='padding: 15px !important; margin-bottom: 12px; border-left: 4px solid #38BDF8;'>
+                        <strong style='color:#38BDF8;'>{c['client']}</strong>
+                        <div style='display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 8px; font-size: 0.85rem;'>
+                            <div><b>Contribution:</b> {c['contribution']:.1f}%</div>
+                            <div><b>Samples:</b> {c['samples']}</div>
+                            <div><b>Local Accuracy:</b> {c['accuracy']:.2f}%</div>
+                            <div><b>Confidence:</b> {c['confidence']}%</div>
+                        </div>
+                        <p style='margin: 8px 0 0 0; font-size: 0.85rem; color:#94A3B8;'>{c['explanation']}</p>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+        else:
+            st.info("No contribution data generated.")
+            
+    # 12. FAIRNESS TAB
+    with t_fairness:
+        from federated.fairness import FederatedFairnessAppraiser
+        fairness_res = FederatedFairnessAppraiser.appraise_fairness(cached_metrics)
+        render_standard_schema_section(
+            title="Federated System Fairness Parity",
+            score=fairness_res["fairness_score"],
+            rating=fairness_res["rating"],
+            confidence=fairness_res["confidence"],
+            evidence=fairness_res["evidence"],
+            explanation=fairness_res["explanation"],
+            score_label="Fairness Index"
+        )
+        
+    # 13. HETEROGENEITY TAB
+    with t_hetero:
+        from federated.heterogeneity import FederatedHeterogeneityAnalyzer
+        hetero_res = FederatedHeterogeneityAnalyzer.analyze_heterogeneity(cached_metrics)
+        render_standard_schema_section(
+            title="Statistical Heterogeneity Analyzer",
+            score=hetero_res["heterogeneity_score"],
+            rating=hetero_res["classification"],
+            confidence=hetero_res["confidence"],
+            evidence=hetero_res["evidence"],
+            explanation=hetero_res["explanation"],
+            score_label="Heterogeneity Score"
+        )
+        
+    # 14. EXPLAINABILITY TAB
+    with t_explain:
+        st.subheader("💬 Rule-Based XAI Diagnostics")
+        from federated.explainability import FederatedExplainabilityEngine
+        explanations = FederatedExplainabilityEngine.generate_explanations(cached_metrics)
+        
+        for exp in explanations:
+            st.markdown(
+                f"""
+                <div class="glass-card" style='padding: 15px !important; margin-bottom: 12px; border-left: 4px solid #A78BFA;'>
+                    <strong style='color:#A78BFA;'>❓ {exp['question']}</strong>
+                    <p style='margin: 6px 0; font-size: 0.9rem; color:#E2E8F0;'>{exp['answer']}</p>
+                    <div style='font-size:0.8rem; color:#94A3B8;'>Confidence: <b>{exp['confidence']}%</b></div>
+                    <ul style='margin: 4px 0 0 0; padding-left: 20px; font-size:0.8rem; color:#94A3B8;'>
+                """ + "".join(f"<li>{ev}</li>" for ev in exp["evidence"]) + """
+                    </ul>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+            
+    # 15. RECOMMENDATIONS TAB
+    with t_recommend:
+        st.subheader("💡 Intelligent Recommendations Engine")
+        from federated.recommendations import FederatedRecommendationEngine
+        recommendations = FederatedRecommendationEngine.generate_recommendations(cached_metrics)
+        
+        for r in recommendations:
+            st.markdown(
+                f"""
+                <div class="glass-card" style='padding: 15px !important; margin-bottom: 12px; border-left: 4px solid #10B981;'>
+                    <strong style='color:#34D399;'>💡 {r['title']}</strong>
+                    <p style='margin: 6px 0; font-size: 0.9rem; color:#E2E8F0;'><b>Reason:</b> {r['reason']}</p>
+                    <p style='margin: 0; font-size: 0.9rem; color:#E2E8F0;'><b>Expected Impact:</b> {r['expected_impact']}</p>
+                    <div style='margin-top: 6px; font-size:0.8rem; color:#94A3B8;'>Confidence: <b>{r['confidence']}%</b></div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
     # Reset button to clear simulation run
     if st.button("Reset Simulation Run"):

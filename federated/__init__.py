@@ -19,3 +19,9 @@ from federated.topology import generate_topology_chart
 from federated.monitor import FederatedCommunicationMonitor
 from federated.replay import FederatedReplayController
 from federated.dashboard import FederatedDashboardHelper
+from federated.analytics import FederatedAnalyticsEngine
+from federated.contribution import FederatedContributionAnalyzer
+from federated.fairness import FederatedFairnessAppraiser
+from federated.heterogeneity import FederatedHeterogeneityAnalyzer
+from federated.explainability import FederatedExplainabilityEngine
+from federated.recommendations import FederatedRecommendationEngine

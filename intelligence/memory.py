@@ -150,6 +150,44 @@ class MemoryObject:
         except Exception:
             pass
 
+        # Compile Phase 6.4 standardized telemetry schemas
+        from federated.analytics import FederatedAnalyticsEngine
+        from federated.contribution import FederatedContributionAnalyzer
+        from federated.fairness import FederatedFairnessAppraiser
+        from federated.heterogeneity import FederatedHeterogeneityAnalyzer
+        from federated.explainability import FederatedExplainabilityEngine
+        from federated.recommendations import FederatedRecommendationEngine
+
+        analytics_data = {}
+        contributions_data = []
+        fairness_data = {}
+        heterogeneity_data = {}
+        explanations_data = []
+        recommendations_data = []
+
+        if cached_metrics is not None:
+            analytics_data = FederatedAnalyticsEngine.analyze_metrics(cached_metrics)
+            contributions_data = FederatedContributionAnalyzer.analyze_contributions(cached_metrics)
+            fairness_data = FederatedFairnessAppraiser.appraise_fairness(cached_metrics)
+            heterogeneity_data = FederatedHeterogeneityAnalyzer.analyze_heterogeneity(cached_metrics)
+            explanations_data = FederatedExplainabilityEngine.generate_explanations(cached_metrics)
+            recommendations_data = FederatedRecommendationEngine.generate_recommendations(cached_metrics)
+        else:
+            # Fallbacks for uninitialized runs
+            analytics_data = {
+                "score": 0, "rating": "N/A", "confidence": 100, 
+                "evidence": ["No history records available."], 
+                "explanation": "No training runs have been completed yet."
+            }
+            fairness_data = {
+                "fairness_score": 100, "rating": "Excellent", "confidence": 100,
+                "evidence": ["No clients registered yet."], "explanation": "No training runs completed yet."
+            }
+            heterogeneity_data = {
+                "heterogeneity_score": 0, "classification": "IID", "confidence": 100,
+                "evidence": ["No splits registered."], "explanation": "No training runs completed yet."
+            }
+
         experiment_snapshots = []
         for h in convergence_history:
             experiment_snapshots.append({
@@ -205,6 +243,12 @@ class MemoryObject:
             "leaderboard": leaderboard_data,
             "experiment": experiment_dict,
             "experiments_history": experiments_list,
+            "analytics": analytics_data,
+            "contributions": contributions_data,
+            "fairness": fairness_data,
+            "heterogeneity": heterogeneity_data,
+            "explanations": explanations_data,
+            "recommendations": recommendations_data,
             "global_metrics": {
                 "accuracy": global_acc,
                 "loss": global_loss,

@@ -144,7 +144,7 @@ class OfflineLLMEngine:
         algos = memory_obj.get("algorithms", [])
         
         # Keyword 0: Federated Learning
-        if any(kw in prompt_lower for kw in ["federated", "round", "global accuracy", "client", "aggregation", "communication", "bytes", "latency", "version", "improved", "timeline", "history", "participate", "leaderboard", "compare", "experiment", "export", "fastest"]):
+        if any(kw in prompt_lower for kw in ["federated", "round", "global accuracy", "client", "aggregation", "communication", "bytes", "latency", "version", "improved", "timeline", "history", "participate", "leaderboard", "compare", "experiment", "export", "fastest", "fairness", "heterogeneity", "non-iid", "iid", "recommend", "slower", "explain"]):
             fed = memory_obj.get("federated", {})
             if fed and fed.get("enabled"):
                 algo_selected = fed.get("algorithm", {}).get("selected", "FedAvg")
@@ -212,6 +212,63 @@ class OfflineLLMEngine:
                         fastest = min(exps, key=lambda x: x.get("duration", float('inf')))
                         return f"Experiment **{fastest['id']}** finished fastest, completing training in **{fastest['duration']/1000.0:.2f} seconds** (Final Accuracy: {fastest['final_accuracy']*100:.2f}%)."
                     return "No historical experiments recorded to compare durations."
+
+                # Check fairness query
+                if "fairness" in prompt_lower:
+                    fair = fed.get("fairness", {})
+                    if fair:
+                        bullets = "\n".join(f"- {ev}" for ev in fair.get("evidence", []))
+                        return (
+                            f"### Federated Training Fairness Appraisals\n"
+                            f"**Fairness Index Score**: `{fair.get('fairness_score')}` | Rating: `{fair.get('rating')}` | Confidence: `{fair.get('confidence')}%`\n\n"
+                            f"**Explanation**:\n{fair.get('explanation')}\n\n"
+                            f"**Evidence Logs**:\n{bullets}"
+                        )
+                    return "No fairness metrics appraised yet."
+                    
+                # Check heterogeneity query
+                if any(kw in prompt_lower for kw in ["non-iid", "iid", "heterogeneity"]):
+                    het = fed.get("heterogeneity", {})
+                    if het:
+                        bullets = "\n".join(f"- {ev}" for ev in het.get("evidence", []))
+                        return (
+                            f"### Statistical Heterogeneity Analysis\n"
+                            f"**Heterogeneity Score**: `{het.get('heterogeneity_score')}` | Classification: `{het.get('classification')}` | Confidence: `{het.get('confidence')}%`\n\n"
+                            f"**Explanation**:\n{het.get('explanation')}\n\n"
+                            f"**Evidence Logs**:\n{bullets}"
+                        )
+                    return "No heterogeneity analysis completed yet."
+                    
+                # Check client contribution query
+                if "evidence for client" in prompt_lower or "contribution" in prompt_lower:
+                    contribs = fed.get("contributions", [])
+                    if contribs:
+                        details = []
+                        for c in contribs:
+                            details.append(f"#### {c['client']}\n- Contribution Weight: **{c['contribution']:.1f}%**\n- Samples count: **{c['samples']}**\n- Accuracy achieved: **{c['accuracy']:.2f}%**\n- Explanation: {c['explanation']}")
+                        return "### Client Contribution Telemetry Details\n\n" + "\n\n".join(details)
+                    return "No client contribution analytics compiled yet."
+                    
+                # Check recommendation query
+                if "recommend" in prompt_lower:
+                    recs = fed.get("recommendations", [])
+                    if recs:
+                        bullets = []
+                        for r in recs:
+                            bullets.append(f"- **{r['title']}** (Confidence: {r['confidence']}%)\n  - Reason: {r['reason']}\n  - Expected Impact: {r['expected_impact']}")
+                        return "### Intelligent Optimization Recommendations\n\n" + "\n".join(bullets)
+                    return "No system optimization recommendations formulated yet."
+                    
+                # Check round duration explainability query
+                if "why was round" in prompt_lower or "slower" in prompt_lower:
+                    exps_list = fed.get("explanations", [])
+                    if exps_list:
+                        bullets = []
+                        for ex in exps_list:
+                            ev_str = ", ".join(ex.get("evidence", []))
+                            bullets.append(f"- **{ex['question']}**\n  - Answer: {ex['answer']}\n  - Evidence: {ev_str}")
+                        return "### Federated Explanations Engine\n\n" + "\n".join(bullets)
+                    return "No round-wise explanations available yet."
 
                 # Check specific timeline query
                 if "timeline" in prompt_lower:
