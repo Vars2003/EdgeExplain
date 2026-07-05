@@ -56,6 +56,131 @@ class MemoryObject:
         # 5. Summaries
         summaries = DatasetSummarizer.compile_all_summaries(context, algo_recs)
         
+        # 5.5 Construct federated payload block
+        default_model = None
+        if algo_recs:
+            supported_algos = ["logistic regression", "decision tree", "random forest"]
+            for rec_item in algo_recs:
+                rec_name = rec_item.get("algorithm", "").lower()
+                if any(sa in rec_name for sa in supported_algos):
+                    if "logistic" in rec_name:
+                        default_model = "Logistic Regression"
+                    elif "decision tree" in rec_name:
+                        default_model = "Decision Tree"
+                    else:
+                        default_model = "Random Forest"
+                    break
+        if not default_model:
+            default_model = "Random Forest"
+
+        num_c = 3
+        dataset_partitions = []
+        try:
+            rows_split = len(df) // num_c
+            for c_idx in range(1, num_c + 1):
+                dataset_partitions.append({
+                    "client_id": c_idx,
+                    "rows": rows_split,
+                    "columns": df.shape[1],
+                    "partition_type": "equal"
+                })
+        except Exception:
+            pass
+
+        # Check if we have completed metrics cached in session state
+        import streamlit as st
+        cached_metrics = None
+        try:
+            if hasattr(st, "session_state") and st.session_state is not None:
+                cached_metrics = st.session_state.get("federated_metrics", None)
+        except Exception:
+            pass
+
+        # Defaults or cached metrics
+        clients = num_c
+        rounds = 5
+        strategy = "equal"
+        status = "Initialized"
+        client_metrics = []
+        convergence_history = []
+        global_acc = None
+        global_loss = None
+        comm_cost = None
+        training_time = None
+
+        if cached_metrics is not None:
+            clients = cached_metrics.get("num_clients", clients)
+            rounds = cached_metrics.get("round_number", rounds)
+            status = "Training Complete"
+            
+            # Map client metrics
+            accs = cached_metrics.get("accuracies", {})
+            losses = cached_metrics.get("losses", {})
+            times = cached_metrics.get("training_times_ms", {})
+            sizes = cached_metrics.get("dataset_sizes", {})
+            for c_id in accs.keys():
+                client_metrics.append({
+                    "client_id": c_id,
+                    "accuracy": accs[c_id],
+                    "loss": losses[c_id],
+                    "training_time_ms": times.get(c_id, 0.0),
+                    "samples": sizes.get(c_id, 0)
+                })
+                
+            convergence_history = cached_metrics.get("convergence_history", [])
+            global_model_history = cached_metrics.get("global_model_history", [])
+            training_timeline = cached_metrics.get("training_timeline", [])
+            global_acc = cached_metrics.get("global_accuracy", None)
+            global_loss = cached_metrics.get("global_loss", None)
+            comm_cost = cached_metrics.get("communication_cost_bytes", None)
+            training_time = cached_metrics.get("total_training_time_ms", 0.0) / 1000.0 # Convert to seconds
+            
+        else:
+            global_model_history = []
+            training_timeline = []
+            
+        federated_dict = {
+            "enabled": True,
+            "simulation_mode": True,
+            "algorithm": {
+                "selected": "FedAvg",
+                "status": "Training Complete" if cached_metrics is not None else "Infrastructure Ready",
+                "implemented": True
+            },
+            "clients": clients,
+            "rounds": rounds,
+            "partition_strategy": strategy,
+            "selected_model": default_model,
+            "dataset_partitions": dataset_partitions,
+            "global_model": None,
+            "client_metrics": client_metrics,
+            "convergence_history": convergence_history,
+            "global_model_history": global_model_history,
+            "training_timeline": training_timeline,
+            "global_metrics": {
+                "accuracy": global_acc,
+                "loss": global_loss,
+                "communication_cost": comm_cost,
+                "training_time": training_time
+            },
+            "aggregation": {
+                "algorithm": "FedAvg",
+                "supported_models": [
+                    "Logistic Regression"
+                ],
+                "future_models": [
+                    "Decision Tree",
+                    "Random Forest",
+                    "FedProx",
+                    "FedNova",
+                    "SCAFFOLD",
+                    "FedDyn",
+                    "MOON"
+                ]
+            },
+            "status": status
+        }
+
         # 6. Build final payload
         memory_payload = {
             "metadata": {
@@ -70,7 +195,8 @@ class MemoryObject:
             "summaries": summaries,
             "recommendations": recs,
             "algorithms": algo_recs,
-            "plugins": {} # Future plugin outputs will append here
+            "plugins": {}, # Future plugin outputs will append here
+            "federated": federated_dict
         }
         
         # 7. Register Plugins dynamically

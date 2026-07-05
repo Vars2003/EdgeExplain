@@ -143,6 +143,111 @@ class OfflineLLMEngine:
         recs = memory_obj.get("recommendations", {})
         algos = memory_obj.get("algorithms", [])
         
+        # Keyword 0: Federated Learning
+        if any(kw in prompt_lower for kw in ["federated", "round", "global accuracy", "client", "aggregation", "communication", "bytes", "latency", "version", "improved", "timeline", "history", "participate"]):
+            fed = memory_obj.get("federated", {})
+            if fed and fed.get("enabled"):
+                algo_selected = fed.get("algorithm", {}).get("selected", "FedAvg")
+                rounds = fed.get("rounds", 0)
+                clients = fed.get("clients", 0)
+                global_metrics = fed.get("global_metrics", {})
+                
+                client_metrics = fed.get("client_metrics", [])
+                best_client_str = "N/A"
+                if client_metrics:
+                    best_c = max(client_metrics, key=lambda x: x.get("accuracy", 0.0))
+                    best_client_str = f"Client {best_c.get('client_id')} (Accuracy: {best_c.get('accuracy')*100:.2f}%)"
+                
+                history = fed.get("global_model_history", [])
+                timeline = fed.get("training_timeline", [])
+                
+                # Check specific timeline query
+                if "timeline" in prompt_lower:
+                    if timeline:
+                        bullets = []
+                        for item in timeline[:15]:
+                            bullets.append(f"- **{item['time']}**: {item['event']}")
+                        timeline_text = "\n".join(bullets)
+                        return f"### Federated Training Timeline Activity Log\nHere are the logged events:\n\n{timeline_text}"
+                    return "No timeline events have been logged yet."
+                    
+                # Check round detail query
+                for r_idx in range(1, 21):
+                    if f"round {r_idx}" in prompt_lower or f"round_{r_idx}" in prompt_lower:
+                        match_history = [h for h in history if h.get("round") == r_idx]
+                        if match_history:
+                            h = match_history[0]
+                            return (
+                                f"### Federated Round {r_idx} Status Details\n"
+                                f"- **Global Version**: `{h['version']}`\n"
+                                f"- **Global Accuracy**: `{h['accuracy']*100:.2f}%`\n"
+                                f"- **Global Loss**: `{h['loss']:.4f}`\n"
+                                f"- **Aggregation Time**: `{h['aggregation_time_ms']:.2f} ms`\n"
+                                f"- **Training Time**: `{h['training_time_ms']/1000.0:.2f} s`\n"
+                                f"- **Participating Clients**: `{h['participating_clients']}`\n"
+                                f"- **Aggregator**: `{h['aggregator']}`"
+                            )
+                        return f"No global version records found matching Round {r_idx}."
+                        
+                # Check version details query
+                if "version" in prompt_lower:
+                    if history:
+                        latest = history[-1]
+                        return (
+                            f"### Latest Global Model Version\n"
+                            f"**Active Version**: `{latest['version']}` (Round {latest['round']})\n"
+                            f"- **Accuracy**: `{latest['accuracy']*100:.2f}%`\n"
+                            f"- **Loss**: `{latest['loss']:.4f}`\n"
+                            f"- **Participating Clients**: `{latest['participating_clients']}`\n"
+                            f"- **Aggregator**: `{latest['aggregator']}`"
+                        )
+                    return "No version records have been initialized yet."
+                    
+                # Check improvement details query
+                if "improved" in prompt_lower:
+                    if len(history) > 1:
+                        first = history[0]
+                        latest = history[-1]
+                        acc_diff = (latest["accuracy"] - first["accuracy"]) * 100
+                        loss_diff = latest["loss"] - first["loss"]
+                        return (
+                            f"### Global Model Performance Improvement\n"
+                            f"Over `{len(history)}` rounds of collaborative training:\n\n"
+                            f"- **Accuracy**: `{first['accuracy']*100:.2f}%` ➔ `{latest['accuracy']*100:.2f}%` ({'+' if acc_diff >= 0 else ''}{acc_diff:.2f}% change)\n"
+                            f"- **Loss**: `{first['loss']:.4f}` ➔ `{latest['loss']:.4f}` ({'' if loss_diff <= 0 else '+'}{loss_diff:.4f} change)"
+                        )
+                    return "Need at least 2 training rounds of history data to calculate performance improvements."
+                
+                # Check history details query
+                if "history" in prompt_lower:
+                    if history:
+                        rows = []
+                        for h in history:
+                            rows.append(f"| {h['version']} | {h['round']} | {h['accuracy']*100:.2f}% | {h['loss']:.4f} |")
+                        table_str = "\n".join(rows)
+                        return (
+                            f"### Global Model Evolution History\n"
+                            f"| Version | Round | Accuracy | Loss |\n"
+                            f"| :--- | :--- | :--- | :--- |\n"
+                            f"{table_str}"
+                        )
+                    return "No history records compiled yet."
+
+                return (
+                    f"### Federated Learning Summary\n"
+                    f"Here is the current state of collaborative training from the Memory Object:\n\n"
+                    f"- **Aggregation Algorithm**: `{algo_selected}`\n"
+                    f"- **Rounds Completed**: `{rounds}`\n"
+                    f"- **Client Count (K)**: `{clients}`\n"
+                    f"- **Global Accuracy**: `{f'{global_metrics.get('accuracy', 0.0)*100:.2f}%' if global_metrics.get('accuracy') is not None else 'N/A'}`\n"
+                    f"- **Global Loss**: `{f'{global_metrics.get('loss', 0.0):.4f}' if global_metrics.get('loss') is not None else 'N/A'}`\n"
+                    f"- **Best Performing Client**: `{best_client_str}`\n"
+                    f"- **Total Communication Cost**: `{f'{global_metrics.get('communication_cost', 0):,} bytes' if global_metrics.get('communication_cost') is not None else '0 bytes'}`\n"
+                    f"- **Total Training Time**: `{f'{global_metrics.get('training_time', 0.0):.2f} seconds' if global_metrics.get('training_time') is not None else '0.0 seconds'}`"
+                )
+            else:
+                return "Federated Learning has not been initialized or executed yet. Please navigate to the Federated Learning Workspace in the sidebar and trigger collaborative training."
+
         # Keyword 1: what is this dataset / summary
         if any(kw in prompt_lower for kw in ["what is this dataset", "overview", "summary", "about"]):
             return (

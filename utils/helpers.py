@@ -137,3 +137,40 @@ def inject_custom_css() -> None:
     """
     st.markdown(css, unsafe_allow_html=True)
 
+
+def normalize_dataframe_for_rendering(df_to_render: Any) -> Any:
+    """
+    Ensures that any column in the DataFrame does not contain Python lists, 
+    tuples, sets, dicts, or numpy arrays, which would cause PyArrow serialization errors 
+    when rendered in Streamlit.
+    """
+    import pandas as pd
+    import numpy as np
+    import json
+
+    if not isinstance(df_to_render, pd.DataFrame):
+        return df_to_render
+
+    df_clean = df_to_render.copy()
+    for col in df_clean.columns:
+        if df_clean[col].dtype == object:
+            def clean_val(x):
+                if isinstance(x, (list, tuple, set)):
+                    return ", ".join(map(str, x))
+                elif isinstance(x, dict):
+                    try:
+                        return json.dumps(x)
+                    except Exception:
+                        return str(x)
+                elif isinstance(x, np.ndarray):
+                    return ", ".join(map(str, x.tolist()))
+                elif x is None or pd.isna(x):
+                    return x
+                elif not isinstance(x, (str, int, float, bool)):
+                    return str(x)
+                return x
+            
+            df_clean[col] = df_clean[col].apply(clean_val)
+    return df_clean
+
+

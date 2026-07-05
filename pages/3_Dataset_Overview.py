@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import os
-from utils.helpers import inject_custom_css, format_bytes
+from utils.helpers import inject_custom_css, format_bytes, normalize_dataframe_for_rendering
 from core.visualizer import (
     plot_histogram, plot_scatter, plot_bar, plot_box, 
     plot_correlation_heatmap, plot_correlation_network
@@ -12,22 +12,6 @@ from core.reasoning import ReasoningEngine
 from core.algorithm_selector import AlgorithmSelector
 from core.explain import ExplainabilityEngine
 from core.profiler import DatasetProfiler
-
-def normalize_dataframe_for_rendering(df_to_render: pd.DataFrame) -> pd.DataFrame:
-    """
-    Ensures that any column in the DataFrame does not contain Python lists, 
-    tuples, sets, or dicts, which would cause PyArrow serialization errors 
-    when rendered in Streamlit.
-    """
-    df_clean = df_to_render.copy()
-    for col in df_clean.columns:
-        if df_clean[col].dtype == object:
-            df_clean[col] = df_clean[col].apply(
-                lambda x: ", ".join(map(str, x)) if isinstance(x, (list, tuple, set)) 
-                else str(x) if isinstance(x, dict) 
-                else x
-            )
-    return df_clean
 
 # Re-inject css for sub-page rendering consistency
 inject_custom_css()

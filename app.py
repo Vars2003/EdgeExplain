@@ -90,6 +90,9 @@ try:
             st.Page("pages/14_AI_Evaluation.py", title="AI Chat Evaluation", icon="🎯"),
             st.Page("pages/3_Dataset_Overview.py", title="Legacy All-In-One", icon="🛡️")
         ],
+        "Federated Learning": [
+            st.Page("pages/15_Federated_Learning.py", title="Federated Workspace", icon="🕸️")
+        ],
         "Management": [
             st.Page("pages/6_Reports.py", title="Export Center", icon="💾"),
             st.Page("pages/7_Settings.py", title="Analysis Settings", icon="⚙️"),
