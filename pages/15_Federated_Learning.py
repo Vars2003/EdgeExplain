@@ -2,9 +2,20 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import time
+import json
+import datetime
 import plotly.express as px
 from utils.helpers import inject_custom_css
-from federated import FederatedSimulator, FederatedClient, FederatedServer, FederatedMetrics
+from federated import (
+    FederatedSimulator,
+    FederatedClient,
+    FederatedServer,
+    FederatedMetrics,
+    FederatedExperimentManager,
+    generate_topology_chart,
+    FederatedCommunicationMonitor,
+    FederatedReplayController
+)
 
 # Re-inject CSS for visual consistency
 inject_custom_css()
@@ -15,7 +26,7 @@ if st.session_state.df is None or st.session_state.memory is None:
         """
         <div style='padding: 20px 0; border-bottom: 1px solid #334155; margin-bottom: 30px;'>
             <h1 style='font-family: Outfit, sans-serif; font-size: 2.5rem; margin: 0; background: linear-gradient(90deg, #38BDF8, #818CF8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>
-                Federated Learning Workspace
+                Federated Learning Control Center
             </h1>
         </div>
         """,
@@ -29,14 +40,18 @@ memory = st.session_state.memory
 recs = memory.get("recommendations", [])
 fed_meta = memory.get("federated", {})
 
+# Setup active experiment session ID if not set
+if "active_experiment_id" not in st.session_state:
+    st.session_state.active_experiment_id = "N/A"
+
 st.markdown(
     """
     <div style='padding: 20px 0; border-bottom: 1px solid #334155; margin-bottom: 30px;'>
         <h1 style='font-family: Outfit, sans-serif; font-size: 2.5rem; margin: 0; background: linear-gradient(90deg, #38BDF8, #818CF8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>
-            Federated Learning Workspace
+            Federated Learning Control Center
         </h1>
         <p style='color: #94A3B8; font-size: 1.1rem; margin: 10px 0 0 0;'>
-            Extensible Strategy Aggregation Framework, Training Convergence, and Metrics Visualization.
+            Experiment Manager, Client Leaderboards, Network Topologies, and Session Exports.
         </p>
     </div>
     """,
@@ -44,59 +59,22 @@ st.markdown(
 )
 
 # ----------------------------------------------------
-# 1. EDUCATIONAL WORKFLOW DIAGRAM
+# 1. SETUP CONFIGURATIONS
 # ----------------------------------------------------
-st.markdown("### 🕸️ Collaborative Training Pipeline")
-st.markdown(
-    """
-    <div style='display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: center; padding: 15px; 
-                background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px;'>
-        <div style='padding: 8px 12px; background: rgba(56, 189, 248, 0.2); border: 1px solid #38BDF8; border-radius: 6px; font-size: 0.85rem; font-weight: 600; color: #38BDF8;'>Dataset</div>
-        <div style='color: #94A3B8;'>➔</div>
-        <div style='padding: 8px 12px; background: rgba(129, 140, 248, 0.2); border: 1px solid #818CF8; border-radius: 6px; font-size: 0.85rem; font-weight: 600; color: #818CF8;'>Analytics</div>
-        <div style='color: #94A3B8;'>➔</div>
-        <div style='padding: 8px 12px; background: rgba(129, 140, 248, 0.2); border: 1px solid #818CF8; border-radius: 6px; font-size: 0.85rem; font-weight: 600; color: #818CF8;'>Recommendation Engine</div>
-        <div style='color: #94A3B8;'>➔</div>
-        <div style='padding: 8px 12px; background: rgba(167, 139, 250, 0.2); border: 1px solid #A78BFA; border-radius: 6px; font-size: 0.85rem; font-weight: 600; color: #A78BFA;'>Federated Simulator</div>
-        <div style='color: #94A3B8;'>➔</div>
-        <div style='padding: 8px 12px; background: rgba(167, 139, 250, 0.2); border: 1px solid #A78BFA; border-radius: 6px; font-size: 0.85rem; font-weight: 600; color: #A78BFA;'>Simulated Clients</div>
-        <div style='color: #94A3B8;'>➔</div>
-        <div style='padding: 8px 12px; background: rgba(244, 63, 94, 0.2); border: 1px solid #F43F5E; border-radius: 6px; font-size: 0.85rem; font-weight: 600; color: #F43F5E;'>Aggregation (FedAvg)</div>
-        <div style='color: #94A3B8;'>➔</div>
-        <div style='padding: 8px 12px; background: rgba(52, 211, 153, 0.2); border: 1px solid #34D399; border-radius: 6px; font-size: 0.85rem; font-weight: 600; color: #34D399;'>Global Model</div>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
-st.markdown("---")
-
 c_left, c_right = st.columns([1.1, 0.9])
 
 with c_left:
-    st.markdown("### ⚙️ Federated Configuration")
+    st.markdown("### ⚙️ Control Center Setup")
     
-    # Preprocessing Pipeline Summary
-    st.markdown("**🔧 Preprocessing Pipeline Summary:**")
-    if recs:
-        for r in recs[:2]:
-            st.markdown(f"- `{r['type']}` for **{r['features']}**: {r['suggested_fix']}")
-    else:
-        st.markdown("- Clean numerical nulls using median strategy.")
-        
-    # Default recommended model from AutoML
     default_model = fed_meta.get("selected_model", "Random Forest")
-    st.markdown(f"**🤖 Recommended Model (AutoML Selection)**: `{default_model}`")
-    
     model_override = st.selectbox(
-        "Select Model for Federated Learning:",
+        "Select model for Federated training run:",
         ["Logistic Regression", "Random Forest", "Decision Tree"],
         index=["Logistic Regression", "Random Forest", "Decision Tree"].index(default_model)
     )
 
-    # Strategy Selector
     selected_strategy = st.selectbox(
-        "Select Aggregator Strategy:",
+        "Select Aggregation Strategy:",
         ["FedAvg", "FedProx (Placeholder)", "FedNova (Placeholder)", "SCAFFOLD (Placeholder)", "FedDyn (Placeholder)", "MOON (Placeholder)"],
         index=0
     )
@@ -140,7 +118,7 @@ st.markdown("---")
 # ----------------------------------------------------
 st.markdown("### 🚀 Federated Execution Control")
 
-btn_train = st.button("Start Federated Training", type="primary")
+btn_train = st.button("Start Federated Training Session", type="primary")
 
 if btn_train:
     if model_override in ["Random Forest", "Decision Tree"]:
@@ -170,6 +148,17 @@ if btn_train:
             unsafe_allow_html=True
         )
     else:
+        # Create experiment session before training round loop
+        exp_id = FederatedExperimentManager.create_experiment(
+            dataset_name=st.session_state.filename or "dataset.csv",
+            algorithm="FedAvg",
+            aggregator=selected_strategy,
+            rounds=rounds,
+            clients=num_clients,
+            model=model_override
+        )
+        st.session_state.active_experiment_id = exp_id
+        
         # Run FedAvg Training loop
         with st.spinner("Initializing Federated training nodes..."):
             server = FederatedServer(selected_strategy)
@@ -217,6 +206,45 @@ if btn_train:
                 
             status_text.text("Federated training rounds completed successfully!")
             
+            # Compile duration, final accuracy, and loss
+            duration = float(metrics.total_training_time_ms)
+            final_acc = float(metrics.global_accuracy)
+            final_loss = float(metrics.global_loss)
+            
+            # Compile snapshots and leaderboard
+            snapshots = []
+            for h in metrics.convergence_history:
+                snapshots.append({
+                    "round": h.get("round"),
+                    "accuracy": h.get("accuracy"),
+                    "loss": h.get("loss"),
+                    "clients": num_clients,
+                    "timestamp": datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+                })
+                
+            leaderboard_data = []
+            c_accs = metrics.local_accuracies
+            c_losses = metrics.local_losses
+            c_times = metrics.training_times_ms
+            c_sizes = metrics.dataset_sizes
+            for c_id, acc in c_accs.items():
+                leaderboard_data.append({
+                    "client_id": c_id,
+                    "accuracy": acc,
+                    "loss": c_losses.get(c_id, 0.0),
+                    "samples": c_sizes.get(c_id, 0),
+                    "training_time_ms": c_times.get(c_id, 0.0)
+                })
+                
+            FederatedExperimentManager.update_experiment(
+                exp_id=exp_id,
+                duration=duration,
+                final_accuracy=final_acc,
+                final_loss=final_loss,
+                snapshots=snapshots,
+                leaderboard=leaderboard_data
+            )
+            
             # Cache results in session state
             st.session_state.federated_metrics = metrics.export_summary()
             
@@ -239,141 +267,200 @@ if btn_train:
             st.rerun()
 
 # ----------------------------------------------------
-# 3. METRICS VISUALIZATION PANEL
+# 3. METRICS VISUALIZATION PANEL (9 TABS)
 # ----------------------------------------------------
-st.markdown("---")
 st.markdown("### 📊 Federated Evaluation & Convergence")
 
 cached_metrics = st.session_state.get("federated_metrics", None)
 
 if cached_metrics is not None:
-    st.subheader("🎯 Global Aggregated Metrics")
-    
-    # Render KPI cards
-    c1, c2, c3, c4 = st.columns(4)
-    with c1:
-        st.markdown(
-            f"""
-            <div class="stat-card">
-                <div class="stat-label">Global Accuracy</div>
-                <div class="stat-val">{cached_metrics.get('global_accuracy', 0.0)*100:.2f}%</div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-    with c2:
-        st.markdown(
-            f"""
-            <div class="stat-card">
-                <div class="stat-label">Global Loss</div>
-                <div class="stat-val" style='color: #818CF8;'>{cached_metrics.get('global_loss', 0.0):.4f}</div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-    with c3:
-        st.markdown(
-            f"""
-            <div class="stat-card">
-                <div class="stat-label">Communication Cost</div>
-                <div class="stat-val" style='color: #A78BFA;'>{cached_metrics.get('communication_cost_bytes', 0):,} B</div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-    with c4:
-        st.markdown(
-            f"""
-            <div class="stat-card">
-                <div class="stat-label">Total Time (s)</div>
-                <div class="stat-val" style='color: #34D399;'>{cached_metrics.get('total_training_time_ms', 0.0)/1000.0:.2f}s</div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-        
-    st.markdown("---")
-    
-    # Plotly Charts
-    chart_tab1, chart_tab2, chart_tab3, chart_tab4 = st.tabs([
-        "📈 Accuracy & Loss Convergence", 
-        "💾 Communication & Aggregation", 
-        "👥 Client Comparison",
-        "📜 Model Evolution & Timeline"
+    # 9-tab dashboard setup
+    t_overview, t_clients, t_training, t_comm, t_evol, t_timeline, t_replay, t_exp, t_leader = st.tabs([
+        "👁️ Overview",
+        "👥 Clients",
+        "📈 Training",
+        "💾 Communication",
+        "🔄 Model Evolution",
+        "⏱️ Timeline",
+        "📼 Replay",
+        "🧪 Experiments",
+        "🏆 Leaderboard"
     ])
     
     hist = cached_metrics.get("convergence_history", [])
     hist_df = pd.DataFrame(hist)
     
-    with chart_tab1:
+    # 1. OVERVIEW TAB
+    with t_overview:
+        st.subheader("🎯 Global Aggregated Metrics")
+        c1, c2, c3, c4 = st.columns(4)
+        with c1:
+            st.markdown(
+                f"""
+                <div class="stat-card">
+                    <div class="stat-label">Global Accuracy</div>
+                    <div class="stat-val">{cached_metrics.get('global_accuracy', 0.0)*100:.2f}%</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+        with c2:
+            st.markdown(
+                f"""
+                <div class="stat-card">
+                    <div class="stat-label">Global Loss</div>
+                    <div class="stat-val" style='color: #818CF8;'>{cached_metrics.get('global_loss', 0.0):.4f}</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+        with c3:
+            st.markdown(
+                f"""
+                <div class="stat-card">
+                    <div class="stat-label">Communication Cost</div>
+                    <div class="stat-val" style='color: #A78BFA;'>{cached_metrics.get('communication_cost_bytes', 0):,} B</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+        with c4:
+            st.markdown(
+                f"""
+                <div class="stat-card">
+                    <div class="stat-label">Total Time (s)</div>
+                    <div class="stat-val" style='color: #34D399;'>{cached_metrics.get('total_training_time_ms', 0.0)/1000.0:.2f}s</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+            
+        st.markdown(f"**Experiment ID**: `{st.session_state.active_experiment_id}` | **Aggregator**: `FedAvg` | **Clients**: `{cached_metrics.get('num_clients', 0)}`")
+        st.markdown("---")
+        
+        # Plotly Topology Chart
+        topology_fig = generate_topology_chart(cached_metrics.get('num_clients', 3))
+        st.plotly_chart(topology_fig, use_container_width=True)
+        
+        # Session Export Download Button
+        export_payload = {
+            "experiment_metadata": {
+                "id": st.session_state.active_experiment_id,
+                "dataset": st.session_state.filename,
+                "aggregator": "FedAvg",
+                "rounds_completed": cached_metrics.get("round_number"),
+                "clients_registered": cached_metrics.get("num_clients"),
+                "total_time_ms": cached_metrics.get("total_training_time_ms"),
+                "global_accuracy": cached_metrics.get("global_accuracy"),
+                "global_loss": cached_metrics.get("global_loss")
+            },
+            "client_metrics": [
+                {
+                    "client_id": c_id,
+                    "accuracy": cached_metrics.get("accuracies", {}).get(c_id),
+                    "loss": cached_metrics.get("losses", {}).get(c_id),
+                    "samples": cached_metrics.get("dataset_sizes", {}).get(c_id),
+                    "training_time_ms": cached_metrics.get("training_times_ms", {}).get(c_id)
+                } for c_id in cached_metrics.get("accuracies", {}).keys()
+            ],
+            "communication_statistics": {
+                "bytes_transferred": cached_metrics.get("communication_cost_bytes"),
+                "latency_ms": cached_metrics.get("communication_latency_ms")
+            },
+            "timeline": cached_metrics.get("training_timeline", []),
+            "global_model_history": cached_metrics.get("global_model_history", [])
+        }
+        
+        st.download_button(
+            label="💾 Download Session JSON",
+            data=json.dumps(export_payload, indent=4),
+            file_name=f"fl_session_{st.session_state.active_experiment_id}.json",
+            mime="application/json"
+        )
+        
+    # 2. CLIENTS MONITOR TAB
+    with t_clients:
+        st.subheader("👥 Live Client Performance Grid")
+        
+        c_accs = cached_metrics.get("accuracies", {})
+        c_losses = cached_metrics.get("losses", {})
+        c_times = cached_metrics.get("training_times_ms", {})
+        c_sizes = cached_metrics.get("dataset_sizes", {})
+        
+        for c_id in c_accs.keys():
+            st.markdown(
+                f"""
+                <div class="glass-card" style='padding: 15px !important; margin-bottom: 12px; border-left: 4px solid #818CF8;'>
+                    <strong style='color:#E2E8F0;'>Simulated Client {c_id}</strong> - <span style='color:#34D399; font-weight:600;'>Completed</span>
+                    <div style='display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 8px; font-size: 0.85rem;'>
+                        <div><b>Accuracy:</b> {c_accs[c_id]*100:.2f}%</div>
+                        <div><b>Loss:</b> {c_losses.get(c_id, 0.0):.4f}</div>
+                        <div><b>Samples:</b> {c_sizes.get(c_id, 0)}</div>
+                        <div><b>Train Time:</b> {c_times.get(c_id, 0.0):.2f}ms</div>
+                        <div><b>Comm Cost:</b> {cached_metrics.get('communication_cost_bytes', 0) // cached_metrics.get('num_clients', 1):,} B</div>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+            
+    # 3. TRAINING TAB
+    with t_training:
         if not hist_df.empty:
             c_left, c_right = st.columns(2)
             with c_left:
-                fig_acc = px.line(
-                    hist_df, x="round", y="accuracy", markers=True,
-                    title="Global Accuracy vs round iteration"
-                )
+                fig_acc = px.line(hist_df, x="round", y="accuracy", markers=True, title="Global Accuracy Convergence")
                 fig_acc.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", template="plotly_dark")
                 st.plotly_chart(fig_acc, use_container_width=True)
             with c_right:
-                fig_loss = px.line(
-                    hist_df, x="round", y="loss", markers=True,
-                    title="Global Loss vs round iteration"
-                )
+                fig_loss = px.line(hist_df, x="round", y="loss", markers=True, title="Global Loss Convergence")
                 fig_loss.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", template="plotly_dark")
                 st.plotly_chart(fig_loss, use_container_width=True)
         else:
-            st.info("No history convergence loaded.")
+            st.info("No training metrics generated.")
             
-    with chart_tab2:
+    # 4. COMMUNICATION TAB
+    with t_comm:
+        st.subheader("💾 Communication Costs & Bandwidth Analytics")
         if not hist_df.empty:
             c_left, c_right = st.columns(2)
             with c_left:
-                # Cumulative bytes transferred
                 hist_df["cumulative_bytes"] = hist_df["bytes"].cumsum()
-                fig_bytes = px.line(
-                    hist_df, x="round", y="cumulative_bytes", markers=True,
-                    title="Cumulative bytes transferred vs round"
-                )
+                fig_bytes = px.line(hist_df, x="round", y="cumulative_bytes", markers=True, title="Cumulative Bytes Transferred")
                 fig_bytes.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", template="plotly_dark")
                 st.plotly_chart(fig_bytes, use_container_width=True)
             with c_right:
-                fig_agg = px.bar(
-                    hist_df, x="round", y="aggregation_time_ms",
-                    title="Aggregation time (ms) per round"
-                )
+                fig_agg = px.bar(hist_df, x="round", y="aggregation_time_ms", title="Aggregation Time (ms)")
                 fig_agg.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", template="plotly_dark")
                 st.plotly_chart(fig_agg, use_container_width=True)
                 
-    with chart_tab3:
-        # Bar chart comparing final accuracy of clients
-        c_accs = cached_metrics.get("accuracies", {})
-        c_losses = cached_metrics.get("losses", {})
-        
-        client_records = []
-        for c_id, acc in c_accs.items():
-            client_records.append({
-                "Client": f"Client {c_id}",
-                "Accuracy": acc,
-                "Loss": c_losses.get(c_id, 0.0)
-            })
-        client_df = pd.DataFrame(client_records)
-        
-        if not client_df.empty:
-            fig_client = px.bar(
-                client_df, x="Client", y="Accuracy", color="Accuracy",
-                color_continuous_scale="Viridis", text_auto=".4f",
-                title="Local client accuracy comparisons"
+            # Live stats monitor
+            latest_h = hist[-1]
+            monitor_stats = FederatedCommunicationMonitor.compile_monitor_stats(
+                latest_h.get("round", 1),
+                cached_metrics.get("num_clients", 3),
+                latest_h.get("bytes", 0),
+                latest_h.get("latency_ms", 0.0),
+                latest_h.get("training_time_ms", 1.0)
             )
-            fig_client.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", template="plotly_dark")
-            st.plotly_chart(fig_client, use_container_width=True)
+            st.markdown(
+                f"""
+                <div class="glass-card" style='padding: 15px !important; margin-top: 15px;'>
+                    <strong style='color:#A78BFA;'>🛰️ Live Telemetry Metrics</strong>
+                    <div style='display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; font-size: 0.85rem;'>
+                        <div><b>Est. Bandwidth:</b> {monitor_stats['bandwidth_mbps']:.4f} Mbps</div>
+                        <div><b>Upload Count:</b> {monitor_stats['upload_count']}</div>
+                        <div><b>Download Count:</b> {monitor_stats['download_count']}</div>
+                        <div><b>Latency Ratio:</b> {monitor_stats['latency_ratio']*100:.2f}%</div>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
             
-            st.markdown("**📋 Local Client Run Records:**")
-            st.dataframe(client_df, use_container_width=True)
-
-    with chart_tab4:
-        st.markdown("### 🧬 Global Model Evolution")
-        
+    # 5. MODEL EVOLUTION TAB
+    with t_evol:
+        st.subheader("🧬 Global Model Version History")
         history = cached_metrics.get("global_model_history", [])
         if history:
             latest_v = history[-1]
@@ -386,17 +473,12 @@ if cached_metrics is not None:
                         <div><b>Accuracy:</b> {latest_v['accuracy']*100:.2f}%</div>
                         <div><b>Loss:</b> {latest_v['loss']:.4f}</div>
                         <div><b>Comm Cost:</b> {latest_v['communication_cost']:,} B</div>
-                        <div><b>Agg Time:</b> {latest_v['aggregation_time_ms']:.2f}ms</div>
-                        <div><b>Train Time:</b> {latest_v['training_time_ms']/1000.0:.2f}s</div>
-                        <div><b>Participating Clients:</b> {latest_v['participating_clients']}</div>
-                        <div><b>Aggregator:</b> {latest_v['aggregator']}</div>
                     </div>
                 </div>
                 """,
                 unsafe_allow_html=True
             )
             
-            st.markdown("**📋 Version History Table:**")
             hist_records = []
             for item in history:
                 hist_records.append({
@@ -405,16 +487,13 @@ if cached_metrics is not None:
                     "Accuracy": f"{item['accuracy']*100:.2f}%",
                     "Loss": f"{item['loss']:.4f}",
                     "Participating Clients": item["participating_clients"],
-                    "Aggregator": item["aggregator"],
                     "Timestamp": item["timestamp"]
                 })
             st.dataframe(pd.DataFrame(hist_records), use_container_width=True)
-        else:
-            st.info("No global model history recorded yet.")
             
-        st.markdown("---")
-        
-        st.markdown("### ⏱️ Federated Timeline Activity Log")
+    # 6. TIMELINE TAB
+    with t_timeline:
+        st.subheader("⏱️ Chronological activity timeline log")
         timeline = cached_metrics.get("training_timeline", [])
         if timeline:
             timeline_str = ""
@@ -437,12 +516,144 @@ if cached_metrics is not None:
                     
                 timeline_str += f"- **{item['time']}** | {icon} **{event_name}** ({details})\n"
             st.markdown(timeline_str)
+            
+    # 7. REPLAY TAB
+    with t_replay:
+        st.subheader("📼 Historical Round Replay Panel")
+        history = cached_metrics.get("global_model_history", [])
+        if history:
+            round_list = [h.get("round") for h in history]
+            selected_round = st.selectbox("Select Round to Replay:", round_list)
+            
+            snapshot = FederatedReplayController.load_round_snapshot(selected_round, history)
+            if snapshot:
+                st.markdown(
+                    f"""
+                    <div class="glass-card" style='padding: 15px !important; border-left: 4px solid #F59E0B;'>
+                        <strong style='color:#F59E0B;'>Round {selected_round} Snapshot Loaded</strong>
+                        <div style='display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; font-size: 0.85rem;'>
+                            <div><b>Version:</b> {snapshot['version']}</div>
+                            <div><b>Accuracy:</b> {snapshot['accuracy']*100:.2f}%</div>
+                            <div><b>Loss:</b> {snapshot['loss']:.4f}</div>
+                            <div><b>Participating Clients:</b> {snapshot['participating_clients']}</div>
+                            <div><b>Comm Cost:</b> {snapshot['communication_cost']:,} B</div>
+                            <div><b>Agg Time:</b> {snapshot['aggregation_time_ms']:.2f}ms</div>
+                            <div><b>Train Time:</b> {snapshot['training_time_ms']/1000.0:.2f}s</div>
+                            <div><b>Aggregator:</b> {snapshot['aggregator']}</div>
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
         else:
-            st.info("No timeline events recorded yet.")
+            st.info("No training history available to replay.")
+            
+    # 8. EXPERIMENTS TAB
+    with t_exp:
+        st.subheader("🧪 Federated Experiment Manager")
+        
+        experiments = FederatedExperimentManager.get_all_experiments()
+        if len(experiments) >= 2:
+            st.markdown("#### Compare Experiments")
+            c_left, c_right = st.columns(2)
+            with c_left:
+                exp_a = st.selectbox("Select Experiment A:", [e["id"] for e in experiments], index=0)
+            with c_right:
+                exp_b = st.selectbox("Select Experiment B:", [e["id"] for e in experiments], index=1)
+                
+            e_a = FederatedExperimentManager.get_experiment(exp_a)
+            e_b = FederatedExperimentManager.get_experiment(exp_b)
+            
+            if e_a and e_b:
+                comp_records = [
+                    {"Metric": "Accuracy", e_a["id"]: f"{e_a['final_accuracy']*100:.2f}%", e_b["id"]: f"{e_b['final_accuracy']*100:.2f}%"},
+                    {"Metric": "Loss", e_a["id"]: f"{e_a['final_loss']:.4f}", e_b["id"]: f"{e_b['final_loss']:.4f}"},
+                    {"Metric": "Duration (s)", e_a["id"]: f"{e_a['duration']/1000.0:.2f}s", e_b["id"]: f"{e_b['duration']/1000.0:.2f}s"},
+                    {"Metric": "Clients", e_a["id"]: e_a["clients"], e_b["id"]: e_b["clients"]},
+                    {"Metric": "Rounds", e_a["id"]: e_a["rounds"], e_b["id"]: e_b["rounds"]}
+                ]
+                st.dataframe(pd.DataFrame(comp_records), use_container_width=True)
+                
+                # Plotly comparison bar chart
+                fig_comp = px.bar(
+                    pd.DataFrame([
+                        {"Experiment": e_a["id"], "Accuracy": e_a["final_accuracy"]},
+                        {"Experiment": e_b["id"], "Accuracy": e_b["final_accuracy"]}
+                    ]),
+                    x="Experiment", y="Accuracy", color="Experiment",
+                    title="Accuracy Comparison Chart"
+                )
+                fig_comp.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", template="plotly_dark")
+                st.plotly_chart(fig_comp, use_container_width=True)
+        else:
+            st.info("Run at least 2 training experiments to unlock side-by-side session comparison reports.")
+            
+        st.markdown("**📋 Experiment History Logs:**")
+        exp_records = []
+        for e in experiments:
+            exp_records.append({
+                "ID": e["id"],
+                "Model": e["model"],
+                "Clients": e["clients"],
+                "Rounds": e["rounds"],
+                "Accuracy": f"{e['final_accuracy']*100:.2f}%",
+                "Loss": f"{e['final_loss']:.4f}",
+                "Time": f"{e['duration']/1000.0:.2f}s"
+            })
+        st.dataframe(pd.DataFrame(exp_records), use_container_width=True)
+        
+    # 9. LEADERBOARD TAB
+    with t_leader:
+        st.subheader("🏆 Client Leaderboard")
+        
+        # Pull leaderboard data sorted descending
+        sorted_leaderboard = []
+        c_accs = cached_metrics.get("accuracies", {})
+        c_losses = cached_metrics.get("losses", {})
+        c_times = cached_metrics.get("training_times_ms", {})
+        c_sizes = cached_metrics.get("dataset_sizes", {})
+        
+        for c_id, acc in c_accs.items():
+            sorted_leaderboard.append({
+                "Client ID": f"Client {c_id}",
+                "Accuracy": acc,
+                "Loss": c_losses.get(c_id, 0.0),
+                "Samples": c_sizes.get(c_id, 0),
+                "Train Time": c_times.get(c_id, 0.0)
+            })
+            
+        sorted_leaderboard = sorted(sorted_leaderboard, key=lambda x: x.get("Accuracy", 0.0), reverse=True)
+        
+        if sorted_leaderboard:
+            # Highlight best performer
+            best = sorted_leaderboard[0]
+            st.markdown(
+                f"""
+                <div style='padding:15px; border-left: 4px solid #10B981; background: rgba(16, 185, 129, 0.1); border-radius: 4px; margin-bottom: 20px;'>
+                    <strong style='color:#34D399;'>🥇 Best Performing Client: {best['Client ID']}</strong>
+                    <p style='margin: 4px 0 0 0; font-size: 0.9rem; color: #E2E8F0;'>
+                        Achieved highest validation accuracy of <b>{best['Accuracy']*100:.2f}%</b> in local fit runs.
+                    </p>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+            
+            lead_df = []
+            for rank, item in enumerate(sorted_leaderboard, start=1):
+                lead_df.append({
+                    "Rank": rank,
+                    "Client": item["Client ID"],
+                    "Accuracy": f"{item['Accuracy']*100:.2f}%",
+                    "Loss": f"{item['Loss']:.4f}",
+                    "Samples Count": item["Samples"],
+                    "Training Duration (ms)": f"{item['Train Time']:.2f}ms"
+                })
+            st.dataframe(pd.DataFrame(lead_df), use_container_width=True)
 
     # Reset button to clear simulation run
     if st.button("Reset Simulation Run"):
         st.session_state.federated_metrics = None
         st.rerun()
 else:
-    st.info("ℹ️ No federated training has been executed yet. Click 'Start Federated Training' above to launch the simulation.")
+    st.info("ℹ️ No federated training has been executed yet. Click 'Start Federated Training Session' above to launch the simulation.")

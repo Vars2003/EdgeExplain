@@ -138,7 +138,51 @@ class MemoryObject:
         else:
             global_model_history = []
             training_timeline = []
-            
+
+        # Get active experiment and leaderboard summaries
+        active_exp_id = "EXP_INITIAL"
+        experiments_list = []
+        try:
+            if hasattr(st, "session_state") and st.session_state is not None:
+                active_exp_id = st.session_state.get("active_experiment_id", "EXP_INITIAL")
+                from federated.experiment import FederatedExperimentManager
+                experiments_list = FederatedExperimentManager.get_all_experiments()
+        except Exception:
+            pass
+
+        experiment_snapshots = []
+        for h in convergence_history:
+            experiment_snapshots.append({
+                "round": h.get("round"),
+                "accuracy": h.get("accuracy"),
+                "loss": h.get("loss"),
+                "clients": clients,
+                "timestamp": datetime.datetime.utcnow().isoformat() + "Z"
+            })
+
+        leaderboard_data = []
+        if client_metrics:
+            sorted_clients = sorted(client_metrics, key=lambda x: x.get("accuracy", 0.0), reverse=True)
+            for rank, c in enumerate(sorted_clients, start=1):
+                leaderboard_data.append({
+                    "rank": rank,
+                    "client_id": c["client_id"],
+                    "accuracy": c["accuracy"],
+                    "loss": c["loss"],
+                    "samples": c["samples"],
+                    "training_time_ms": c["training_time_ms"]
+                })
+
+        experiment_dict = {
+            "id": active_exp_id,
+            "dataset": st.session_state.filename if hasattr(st, "session_state") and st.session_state.get("filename") else "dataset.csv",
+            "aggregator": "FedAvg",
+            "rounds": rounds,
+            "clients": clients,
+            "training_time": training_time,
+            "status": status
+        }
+
         federated_dict = {
             "enabled": True,
             "simulation_mode": True,
@@ -157,6 +201,10 @@ class MemoryObject:
             "convergence_history": convergence_history,
             "global_model_history": global_model_history,
             "training_timeline": training_timeline,
+            "experiment_snapshots": experiment_snapshots,
+            "leaderboard": leaderboard_data,
+            "experiment": experiment_dict,
+            "experiments_history": experiments_list,
             "global_metrics": {
                 "accuracy": global_acc,
                 "loss": global_loss,

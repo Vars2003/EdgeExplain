@@ -144,7 +144,7 @@ class OfflineLLMEngine:
         algos = memory_obj.get("algorithms", [])
         
         # Keyword 0: Federated Learning
-        if any(kw in prompt_lower for kw in ["federated", "round", "global accuracy", "client", "aggregation", "communication", "bytes", "latency", "version", "improved", "timeline", "history", "participate"]):
+        if any(kw in prompt_lower for kw in ["federated", "round", "global accuracy", "client", "aggregation", "communication", "bytes", "latency", "version", "improved", "timeline", "history", "participate", "leaderboard", "compare", "experiment", "export", "fastest"]):
             fed = memory_obj.get("federated", {})
             if fed and fed.get("enabled"):
                 algo_selected = fed.get("algorithm", {}).get("selected", "FedAvg")
@@ -161,6 +161,58 @@ class OfflineLLMEngine:
                 history = fed.get("global_model_history", [])
                 timeline = fed.get("training_timeline", [])
                 
+                # Check specific leaderboard query
+                if any(kw in prompt_lower for kw in ["leaderboard", "best client", "best-performing client"]):
+                    leaderboard = fed.get("leaderboard", [])
+                    if leaderboard:
+                        bullets = []
+                        for c in leaderboard:
+                            bullets.append(f"- **Rank {c['rank']}**: Client {c['client_id']} (Accuracy: {c['accuracy']*100:.2f}%, Loss: {c['loss']:.4f}, Samples: {c['samples']}, Time: {c['training_time_ms']:.1f}ms)")
+                        lead_text = "\n".join(bullets)
+                        return f"### Client Leaderboard Rankings\nHere are the local client standings:\n\n{lead_text}"
+                    return f"No client leaderboard stats recorded yet. Best client: {best_client_str}."
+
+                # Check comparison or export query
+                if any(kw in prompt_lower for kw in ["compare", "experiment", "export"]):
+                    exps = fed.get("experiments_history", [])
+                    active_exp = fed.get("experiment", {})
+                    
+                    if "export" in prompt_lower:
+                        return (
+                            f"### Session Export Availability\n"
+                            f"You can export active federated training metrics to a JSON format offline via the Download Session JSON action button located in the Overview panel.\n\n"
+                            f"**Active Experiment Details**:\n"
+                            f"- ID: `{active_exp.get('id', 'N/A')}`\n"
+                            f"- Dataset: `{active_exp.get('dataset', 'N/A')}`\n"
+                            f"- Aggregator: `{active_exp.get('aggregator', 'N/A')}`"
+                        )
+                        
+                    if exps:
+                        bullets = []
+                        for e in exps:
+                            bullets.append(f"- **{e['id']}** (Model: {e['model']}, Acc: {e['final_accuracy']*100:.2f}%, Loss: {e['final_loss']:.4f}, Rounds: {e['rounds']}, Duration: {e['duration']/1000.0:.2f}s)")
+                        exps_text = "\n".join(bullets)
+                        
+                        comparison_hint = ""
+                        if len(exps) >= 2:
+                            comparison_hint = f"\n\nTo compare experiments side-by-side, you can select them in the **Experiments** tab of the Control Center dashboard."
+                        return f"### Registered Experiments History\nHere are the registered experiment runs:\n\n{exps_text}{comparison_hint}"
+                    return f"Currently executing active experiment: `{active_exp.get('id', 'N/A')}`. No other historical experiments registered."
+
+                # Check specific round achievements
+                if "highest accuracy" in prompt_lower or "achieved highest accuracy" in prompt_lower:
+                    if history:
+                        best_round = max(history, key=lambda x: x.get("accuracy", 0.0))
+                        return f"Round {best_round['round']} achieved the highest global accuracy of **{best_round['accuracy']*100:.2f}%** (Loss: {best_round['loss']:.4f})."
+                    return "No training round history available to analyze."
+                    
+                if "fastest" in prompt_lower or "finished fastest" in prompt_lower:
+                    exps = fed.get("experiments_history", [])
+                    if exps:
+                        fastest = min(exps, key=lambda x: x.get("duration", float('inf')))
+                        return f"Experiment **{fastest['id']}** finished fastest, completing training in **{fastest['duration']/1000.0:.2f} seconds** (Final Accuracy: {fastest['final_accuracy']*100:.2f}%)."
+                    return "No historical experiments recorded to compare durations."
+
                 # Check specific timeline query
                 if "timeline" in prompt_lower:
                     if timeline:
